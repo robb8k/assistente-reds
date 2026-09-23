@@ -61,7 +61,7 @@ def gerar_pdf(conteudo_texto):
 col1, col2 = st.columns(2)
 
 with col1:
-    # Seletor de Natureza atualizado conforme pedido
+    # Seletor de Natureza atualizado com Salvamento (Altura, Aquático, Terrestre)
     natureza_ocorrencia = st.selectbox(
         "Selecione a Natureza:",
         [
@@ -175,6 +175,7 @@ with col1:
     processar = st.button("Gerar Relatório", type="primary", use_container_width=True)
 
 with col2:
+    # Título oficial alterado para Relatório:
     st.subheader("Relatório:")
     
     if processar:
@@ -194,7 +195,7 @@ with col2:
             6. LEITURA OBRIGATÓRIA DE DOCUMENTOS E IMAGENS: Analise com máxima atenção todas as imagens de documentos (RGs, CPFs, CNHs) ou fotos de cena enviadas. Extraia rigorosamente todos os dados textuais visíveis nelas (nomes completos, números de documentos, datas de nascimento, filiação, etc.) para preencher os campos do Bloco A com precisão absoluta.
 
             FORMATO ESTRITO DE RESPOSTA (DIVIDIDO EM 3 BLOCOS):
-            ### BLOCO A: CAMPOS ESTRUTURADOS (Extraia com precisão cirúrgica todos os dados de nomes, CPFs, RGs, idades, CPFs e veículos vindos do texto e de todas as imagens enviadas)
+            ### BLOCO A: CAMPOS ESTRUTURADOS (Extraia com precisão cirúrgica todos os dados de nomes, CPFs, RGs, idades e veículos vindos do texto e de todas as imagens enviadas)
             ### BLOCO B: HISTÓRICO NARRATIVO COMPLETO (Redigido com clareza técnica militar e impessoalidade)
             ### BLOCO C: AUDITORIA TÉCNICA E PENDÊNCIAS (Apontando riscos de glosa, inconsistências e dados faltantes críticos)
             """
