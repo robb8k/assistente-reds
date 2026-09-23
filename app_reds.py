@@ -128,9 +128,9 @@ with col1:
     
     st.subheader("Dados:")
     
-    # Sistema de Gravação de Áudio (rótulo redundante apagado, mantendo apenas o componente de voz)
-    st.markdown("🎙️ **gravar:**")
-    audio_rec = st.audio_input("gravar")
+    # Sistema de Gravação de Áudio com o título Gravar: atualizado
+    st.markdown("🎙️ **Gravar:**")
+    audio_rec = st.audio_input("")
     
     if audio_rec is not None:
         audio_bytes = audio_rec.getvalue()
