@@ -120,13 +120,12 @@ with col1:
 
     st.markdown("---")
     
-    # Sistema de upload configurado para abrir o seletor avançado e amplo do telemóvel
+    # Sistema de upload ajustado sem restrição restrita de imagem para forçar o Android a abrir o gestor completo (Galeria, Drive, Ficheiros)
     st.markdown("📎 **Evidências e Documentos:**")
     fich_carregados = st.file_uploader(
-        "Toque para escolher da Galeria, Google Drive ou Câmara:", 
-        type=["jpg", "jpeg", "png", "pdf", "webp"], 
+        "Toque para abrir o gestor (Galeria, Google Drive, Ficheiros):", 
         accept_multiple_files=True,
-        key="upload_avancado"
+        key="upload_geral_completo"
     )
     
     if fich_carregados:
