@@ -20,7 +20,7 @@ st.markdown("""
 # 📋 Easy REDS
 """)
 
-# Inicializa os estados de sessão para garantir persistência
+# Inicializa os estados de sessão para garantir persistência robusta
 if "relato_acumulado" not in st.session_state:
     st.session_state.relato_acumulado = ""
 
@@ -108,17 +108,26 @@ with col1:
                 except Exception as e:
                     st.error(f"Erro na transcrição por microfone: {e}")
 
+    # Callback para atualizar o estado sempre que o utilizador digitar no campo de texto
+    def atualizar_relato():
+        st.session_state.relato_acumulado = st.session_state.input_relato_texto
+
     relato_bruto = st.text_area(
         "Relato Bruto da Guarnição / Equipe:",
         value=st.session_state.relato_acumulado,
         height=220,
-        placeholder="Ex: Equipe empenhada em acidente de trânsito na via..."
+        placeholder="Ex: Equipe empenhada em acidente de trânsito na via...",
+        key="input_relato_texto",
+        on_change=atualizar_relato
     )
     
+    # Garante sincronismo do estado
     st.session_state.relato_acumulado = relato_bruto
 
     if st.button("Limpar Relato Bruto"):
         st.session_state.relato_acumulado = ""
+        st.session_state.lista_fotos = []
+        st.session_state.ultimo_resultado = ""
         st.rerun()
 
     st.markdown("---")
@@ -167,7 +176,8 @@ with col1:
     processar = st.button("Gerar Relatório", type="primary", use_container_width=True)
 
 with col2:
-    st.subheader("Minuta:")
+    # Título alterado de Minuta: para Relatório:
+    st.subheader("Relatório:")
     
     if processar:
         if not relato_bruto.strip() and not st.session_state.lista_fotos:
@@ -193,7 +203,6 @@ with col2:
 
             with st.spinner(f"A ler documentos, analisar evidências e gerar relatório ({natureza_ocorrencia})..."):
                 try:
-                    # Montagem robusta da mensagem multimodal suportada pelo gpt-4o-mini
                     conteudo_mensagem = [{"type": "text", "text": f"DADOS DA OCORRÊNCIA E RELATO:\n{relato_bruto}\n\nPor favor, analise rigorosamente todas as imagens/documentos anexados abaixo para extração de dados:"}]
                     
                     for foto in st.session_state.lista_fotos:
@@ -221,7 +230,7 @@ with col2:
                 except Exception as e:
                     st.error(f"Erro no processamento da IA: {e}")
 
-    # Exibe o resultado e as opções de partilha
+    # Exibe o resultado e as opções de partilha mantendo o estado na sessão
     if st.session_state.ultimo_resultado:
         st.markdown(st.session_state.ultimo_resultado)
         
@@ -238,13 +247,13 @@ with col2:
             st.download_button(
                 label="📥 Baixar PDF",
                 data=pdf_bytes,
-                file_name="Minuta_Auditoria_REDS.pdf",
+                file_name="Relatorio_Auditoria_REDS.pdf",
                 mime="application/pdf",
                 use_container_width=True
             )
             
         with col_wapp:
-            texto_wapp = urllib.parse.quote(f"*MINUTA DE REDS - EASY REDS*\n\n{st.session_state.ultimo_resultado}")
+            texto_wapp = urllib.parse.quote(f"*RELATÓRIO DE REDS - EASY REDS*\n\n{st.session_state.ultimo_resultado}")
             url_whatsapp = f"https://api.whatsapp.com/send?text={texto_wapp}"
             st.markdown(
                 f'<a href="{url_whatsapp}" target="_blank"><button style="width:100%; background-color:#25D366; color:white; border:none; padding:10px; border-radius:5px; font-weight:bold; cursor:pointer;">🟢 WhatsApp</button></a>',
@@ -252,7 +261,7 @@ with col2:
             )
             
         with col_mail:
-            assunto_mail = urllib.parse.quote("Minuta de Ocorrência - Easy REDS")
+            assunto_mail = urllib.parse.quote("Relatório de Ocorrência - Easy REDS")
             corpo_mail = urllib.parse.quote(st.session_state.ultimo_resultado)
             url_email = f"mailto:?subject={assunto_mail}&body={corpo_mail}"
             st.markdown(
