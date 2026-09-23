@@ -51,40 +51,22 @@ def gerar_pdf(conteudo_texto):
     doc.build(story)
     return temp_pdf.name
 
-# Seleção Dinâmica da Natureza da Ocorrência
-natureza_ocorrencia = st.sidebar.selectbox(
-    "Selecione a Natureza Principal:",
-    [
-        "Acidente de Trânsito com Vítima / Capotamento / Atropelamento",
-        "Incêndio em Edificação / Vegetação / Veículo",
-        "Salvamento e Resgate (Altura, Água, Confinado)",
-        "Busca e Salvamento de Desaparecidos",
-        "Atendimento Pré-Hospitalar (Clínico/Trauma Geral)",
-        "Outras Ocorrências / Defesa Civil"
-    ]
-)
-
-SYSTEM_INSTRUCTION_REDS = f"""
-Você é o Assistente Técnico Especialista em Registros Operacionais e Auditoria de Ocorrências do CBMMG.
-A natureza operacional selecionada para esta ocorrência é: {natureza_ocorrencia}.
-
-DIRETRIZES TÉCNICAS E JURÍDICAS MANDATÓRIAS:
-1. FIDELIDADE FACTUAL ESTATUÁRIA: O documento normativo diz o que deve ser feito; o histórico registra o que foi REALMENTE feito. Não presuma procedimentos, técnicas ou dados clínicos não informados.
-2. VEDAÇÃO A TERMOS GENÉRICOS: Nunca utilize expressões vagas como "procedimentos de praxe", "cuidados pertinentes" ou "conforme protocolo". Descreva a conduta real ou limite-se aos fatos citados.
-3. RELATO DE TERCEIRO VS. CONSTATAÇÃO DA EQUIPE: Toda dinâmica de acidente, perda de controle ou autoria não testemunhada diretamente pela guarnição/equipe DEVE ser atribuída formalmente ao declarante.
-4. CONCISÃO E ECONOMIA DE DADOS NO HISTÓRICO: Evite poluir o texto com números de placas, prefixos e matrículas que já possuem campos específicos no sistema.
-5. VEDAÇÃO A DIAGNÓSTICO MÉDICO: Descreva apenas achados e queixas anatômicas/visíveis, jamais ateste diagnósticos patológicos fechados.
-6. LEITURA DE DOCUMENTOS E IMAGENS: Se forem enviadas imagens de documentos (RGs, CPFs, CNHs) ou cenas, extraia rigorosamente todos os dados textuais visíveis nelas para compor os campos estruturados.
-
-FORMATO ESTRITO DE RESPOSTA (DIVIDIDO EM 3 BLOCOS):
-### BLOCO A: CAMPOS ESTRUTURADOS (Extraia com precisão cirúrgica os dados de nomes, CPFs, RGs, idades e veículos vindos do texto e das imagens anexadas)
-### BLOCO B: HISTÓRICO NARRATIVO COMPLETO (Redigido com clareza técnica militar e impessoalidade)
-### BLOCO C: AUDITORIA TÉCNICA E PENDÊNCIAS (Apontando riscos de glosa, inconsistências e dados faltantes críticos)
-"""
-
 col1, col2 = st.columns(2)
 
 with col1:
+    # Seletor de Natureza posicionado na página principal, acima de Dados (Cena / Retorno)
+    natureza_ocorrencia = st.selectbox(
+        "Selecione a Natureza:",
+        [
+            "Acidente de Trânsito com Vítima / Capotamento / Atropelamento",
+            "Incêndio em Edificação / Vegetação / Veículo",
+            "Salvamento e Resgate (Altura, Água, Confinado)",
+            "Busca e Salvamento de Desaparecidos",
+            "Atendimento Pré-Hospitalar (Clínico/Trauma Geral)",
+            "Outras Ocorrências / Defesa Civil"
+        ]
+    )
+    
     st.subheader("Dados (Cena / Retorno)")
     
     # Recurso de Gravação Direta por Microfone com símbolo minimalista
@@ -143,6 +125,24 @@ with col2:
         if not relato_bruto.strip() and not uploaded_file:
             st.warning("⚠️ Validação Pré-auditoria: Insira um relato de texto/voz ou envie uma imagem/documento para prosseguir.")
         else:
+            SYSTEM_INSTRUCTION_REDS = f"""
+            Você é o Assistente Técnico Especialista em Registros Operacionais e Auditoria de Ocorrências do CBMMG.
+            A natureza operacional selecionada para esta ocorrência é: {natureza_ocorrencia}.
+
+            DIRETRIZES TÉCNICAS E JURÍDICAS MANDATÓRIAS:
+            1. FIDELIDADE FACTUAL ESTATUÁRIA: O documento normativo diz o que deve ser feito; o histórico registra o que foi REALMENTE feito. Não presuma procedimentos, técnicas ou dados clínicos não informados.
+            2. VEDAÇÃO A TERMOS GENÉRICOS: Nunca utilize expressões vagas como "procedimentos de praxe", "cuidados pertinentes" ou "conforme protocolo". Descreva a conduta real ou limite-se aos fatos citados.
+            3. RELATO DE TERCEIRO VS. CONSTATAÇÃO DA EQUIPE: Toda dinâmica de acidente, perda de controle ou autoria não testemunhada diretamente pela guarnição/equipe DEVE ser atribuída formalmente ao declarante.
+            4. CONCISÃO E ECONOMIA DE DADOS NO HISTÓRICO: Evite poluir o texto com números de placas, prefixos e matrículas que já possuem campos específicos no sistema.
+            5. VEDAÇÃO A DIAGNÓSTICO MÉDICO: Descreva apenas achados e queixas anatômicas/visíveis, jamais ateste diagnósticos patológicos fechados.
+            6. LEITURA DE DOCUMENTOS E IMAGENS: Se forem enviadas imagens de documentos (RGs, CPFs, CNHs) ou cenas, extraia rigorosamente todos os dados textuais visíveis nelas para compor os campos estruturados.
+
+            FORMATO ESTRITO DE RESPOSTA (DIVIDIDO EM 3 BLOCOS):
+            ### BLOCO A: CAMPOS ESTRUTURADOS (Extraia com precisão cirúrgica os dados de nomes, CPFs, RGs, idades e veículos vindos do texto e das imagens anexadas)
+            ### BLOCO B: HISTÓRICO NARRATIVO COMPLETO (Redigido com clareza técnica militar e impessoalidade)
+            ### BLOCO C: AUDITORIA TÉCNICA E PENDÊNCIAS (Apontando riscos de glosa, inconsistências e dados faltantes críticos)
+            """
+
             with st.spinner(f"A analisar documentos e auditar ocorrência ({natureza_ocorrencia})..."):
                 try:
                     conteudo_mensagem = [{"type": "text", "text": f"DADOS DA OCORRÊNCIA E RELATO:\n{relato_bruto}"}]
