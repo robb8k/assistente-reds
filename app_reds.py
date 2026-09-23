@@ -117,7 +117,7 @@ with col1:
     
     st.session_state.relato_acumulado = relato_bruto
     
-    # Alerta preventivo de pré-auditoria (aviso subtil se o relato estiver muito curto)
+    # Alerta preventivo de pré-auditoria se o relato estiver muito curto
     if relato_bruto.strip() and len(relato_bruto.strip()) < 20:
         st.warning("⚠️ **Aviso de Pré-Auditoria:** O relato está muito curto. Detalhe mais os factos, vítimas ou dados da cena para um histórico mais rico.")
 
@@ -222,15 +222,15 @@ with col2:
                 except Exception as e:
                     st.error(f"Erro no processamento da IA: {e}")
 
-    # Exibe o resultado se ele existir na sessão (garantindo que não se perde ao interagir com outros botões)
+    # Exibe o resultado unificado apenas uma vez na coluna da direita, seguido pelos botões de ação
     if st.session_state.ultimo_resultado:
         st.markdown(st.session_state.ultimo_resultado)
         
         st.markdown("---")
-        st.subheader("📤 Exportação, Cópia e Partilha:")
+        st.subheader("📤 Ações Rápidas (Cópia e Partilha):")
         
-        # Botão de Copiar Texto para a Área de Transferência com 1 Clique (usando component HTML/JS)
-        texto_para_copiar = st.session_state.ultimo_resultado.replace('`', '').replace('"', "'")
+        # Botão de Copiar Texto para a Área de Transferência com 1 Clique
+        texto_para_copiar = st.session_state.ultimo_resultado.replace('`', '').replace('"', "'").replace('\n', '\\n')
         copiar_html = f"""
         <div style="margin-bottom: 10px;">
             <button onclick="navigator.clipboard.writeText(`{texto_para_copiar}`); alert('Minuta copiada com sucesso para a área de transferência!');" 
