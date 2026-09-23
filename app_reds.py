@@ -76,35 +76,52 @@ with col1:
     
     st.subheader("Dados (Cena / Retorno)")
     
-    # Recurso de Gravação Direta por Microfone (Lógica Corrigida)
+    # Recurso de Gravação Direta por Microfone com gravação temporária robusta
     st.markdown("🎙️")
     audio_bytes = st.audio_input("Grave o relato da ocorrência falando ao microfone:")
     
     if audio_bytes is not None:
         audio_hash = hash(audio_bytes.getvalue())
-        # Só tenta transcrever se este áudio ainda não tiver sido processado com sucesso
         if "ultimo_audio" not in st.session_state or st.session_state.ultimo_audio != audio_hash:
             with st.spinner("A transcrever áudio do microfone..."):
+                tmp_path = None
                 try:
-                    # Envia o áudio diretamente da memória (sem guardar no disco do servidor) garantindo compatibilidade
-                    transcript = client.audio.transcriptions.create(
-                        model="whisper-1",
-                        file=("audio.webm", audio_bytes.getvalue())
-                    )
+                    # Grava o stream num ficheiro temporário físico padronizado
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                        tmp.write(audio_bytes.getvalue())
+                        tmp_path = tmp.name
+                    
+                    # Abre o ficheiro gravado e envia para o Whisper
+                    with open(tmp_path, "rb") as audio_file:
+                        transcript = client.audio.transcriptions.create(
+                            model="whisper-1",
+                            file=audio_file,
+                            language="pt"
+                        )
+                    
                     novo_texto = transcript.text
                     
-                    if st.session_state.relato_acumulado.strip():
-                        st.session_state.relato_acumulado += f"\n{novo_texto}"
+                    if novo_texto and novo_texto.strip():
+                        if st.session_state.relato_acumulado.strip():
+                            st.session_state.relato_acumulado += f"\n{novo_texto}"
+                        else:
+                            st.session_state.relato_acumulado = novo_texto
+                        
+                        st.session_state.ultimo_audio = audio_hash
+                        st.success("Áudio transcrito e adicionado ao relato com sucesso!")
+                        st.rerun()
                     else:
-                        st.session_state.relato_acumulado = novo_texto
-                    
-                    # Regista o sucesso apenas SE a transcrição funcionou
-                    st.session_state.ultimo_audio = audio_hash
-                    
-                    st.success("Áudio transcrito e adicionado ao relato com sucesso!")
-                    st.rerun()
+                        st.warning("⚠️ O áudio parece estar vazio ou não foi captado corretamente. Tente gravar novamente.")
+                        
                 except Exception as e:
-                    st.error(f"Erro na transcrição por microfone: Verifique a sua ligação ou a chave API. (Detalhe: {e})")
+                    st.error(f"Erro na transcrição por microfone: {e}")
+                finally:
+                    # Limpeza segura do ficheiro temporário
+                    if tmp_path and os.path.exists(tmp_path):
+                        try:
+                            os.unlink(tmp_path)
+                        except:
+                            pass
 
     # Callback para manter o texto sincronizado no session_state em tempo real
     def atualizar_relato():
@@ -131,10 +148,10 @@ with col1:
 
     st.markdown("---")
     
-    # Sistema de upload de evidências
-    st.markdown("📎 **Evidências e Documentos:**")
+    # Textos atualizados conforme solicitado
+    st.markdown("📎 **Documentos:**")
     fich_carregados = st.file_uploader(
-        "Toque para abrir o gestor (Galeria, Google Drive, Ficheiros):", 
+        "Abrir arquivo:", 
         type=["jpg", "jpeg", "png", "webp"],
         accept_multiple_files=True,
         key="upload_geral_completo"
