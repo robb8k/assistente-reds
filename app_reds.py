@@ -76,50 +76,50 @@ with col1:
     
     st.subheader("Dados (Cena / Retorno)")
     
-    # Recurso de Gravação Direta por Microfone com gravação temporária robusta
+    # Sistema de Gravação de Áudio Refatorado do Zero
     st.markdown("🎙️")
-    audio_bytes = st.audio_input("Grave o relato da ocorrência falando ao microfone:")
+    audio_file_input = st.audio_input("Grave o relato da ocorrência falando ao microfone:")
     
-    if audio_bytes is not None:
-        audio_hash = hash(audio_bytes.getvalue())
-        if "ultimo_audio" not in st.session_state or st.session_state.ultimo_audio != audio_hash:
-            with st.spinner("A transcrever áudio do microfone..."):
-                tmp_path = None
+    if audio_file_input is not None:
+        # Identificador único para evitar processamentos duplicados do mesmo áudio
+        current_audio_id = id(audio_file_input)
+        if st.session_state.get("processed_audio_id") != current_audio_id:
+            with st.spinner("A transcrever áudio com o Whisper..."):
+                audio_path = None
                 try:
-                    # Grava o stream num ficheiro temporário físico padronizado
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-                        tmp.write(audio_bytes.getvalue())
-                        tmp_path = tmp.name
+                    # Grava o binário num ficheiro temporário com extensão universal suportada
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".m4a") as tmp_audio:
+                        tmp_audio.write(audio_file_input.read())
+                        audio_path = tmp_audio.name
                     
-                    # Abre o ficheiro gravado e envia para o Whisper
-                    with open(tmp_path, "rb") as audio_file:
+                    # Envia o ficheiro físico diretamente para a OpenAI
+                    with open(audio_path, "rb") as f:
                         transcript = client.audio.transcriptions.create(
                             model="whisper-1",
-                            file=audio_file,
+                            file=f,
                             language="pt"
                         )
                     
-                    novo_texto = transcript.text
+                    texto_transcrito = transcript.text
                     
-                    if novo_texto and novo_texto.strip():
+                    if texto_transcrito and texto_transcrito.strip():
                         if st.session_state.relato_acumulado.strip():
-                            st.session_state.relato_acumulado += f"\n{novo_texto}"
+                            st.session_state.relato_acumulado += f"\n{texto_transcrito}"
                         else:
-                            st.session_state.relato_acumulado = novo_texto
+                            st.session_state.relato_acumulado = texto_transcrito
                         
-                        st.session_state.ultimo_audio = audio_hash
-                        st.success("Áudio transcrito e adicionado ao relato com sucesso!")
+                        st.session_state.processed_audio_id = current_audio_id
+                        st.success("Áudio transcrito com sucesso!")
                         st.rerun()
                     else:
-                        st.warning("⚠️ O áudio parece estar vazio ou não foi captado corretamente. Tente gravar novamente.")
+                        st.warning("⚠️ O áudio gravado parece estar vazio. Tente novamente.")
                         
                 except Exception as e:
-                    st.error(f"Erro na transcrição por microfone: {e}")
+                    st.error(f"Erro na transcrição: {e}")
                 finally:
-                    # Limpeza segura do ficheiro temporário
-                    if tmp_path and os.path.exists(tmp_path):
+                    if audio_path and os.path.exists(audio_path):
                         try:
-                            os.unlink(tmp_path)
+                            os.unlink(audio_path)
                         except:
                             pass
 
@@ -142,13 +142,13 @@ with col1:
         st.session_state.relato_acumulado = ""
         st.session_state.lista_fotos = []
         st.session_state.ultimo_resultado = ""
-        if "ultimo_audio" in st.session_state:
-            del st.session_state.ultimo_audio
+        if "processed_audio_id" in st.session_state:
+            del st.session_state.processed_audio_id
         st.rerun()
 
     st.markdown("---")
     
-    # Textos atualizados conforme solicitado
+    # Textos atualizados conforme solicitado anteriormente
     st.markdown("📎 **Documentos:**")
     fich_carregados = st.file_uploader(
         "Abrir arquivo:", 
