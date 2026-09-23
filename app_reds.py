@@ -61,13 +61,13 @@ def gerar_pdf(conteudo_texto):
 col1, col2 = st.columns(2)
 
 with col1:
-    # Seletor de Natureza
+    # Seletor de Natureza atualizado conforme pedido
     natureza_ocorrencia = st.selectbox(
         "Selecione a Natureza:",
         [
             "Acidente de Trânsito com Vítima / Capotamento / Atropelamento",
             "Incêndio em Edificação / Vegetação / Veículo",
-            "Salvamento e Resgate (Altura, Água, Confinado)",
+            "Salvamento (Altura, Aquático, Terrestre)",
             "Busca e Salvamento de Desaparecidos",
             "Atendimento Pré-Hospitalar (Clínico/Trauma Geral)",
             "Outras Ocorrências / Defesa Civil"
@@ -108,7 +108,7 @@ with col1:
                 except Exception as e:
                     st.error(f"Erro na transcrição por microfone: {e}")
 
-    # Callback para atualizar o estado sempre que o utilizador digitar no campo de texto
+    # Callback para manter o texto sincronizado no session_state em tempo real
     def atualizar_relato():
         st.session_state.relato_acumulado = st.session_state.input_relato_texto
 
@@ -121,7 +121,6 @@ with col1:
         on_change=atualizar_relato
     )
     
-    # Garante sincronismo do estado
     st.session_state.relato_acumulado = relato_bruto
 
     if st.button("Limpar Relato Bruto"):
@@ -176,7 +175,6 @@ with col1:
     processar = st.button("Gerar Relatório", type="primary", use_container_width=True)
 
 with col2:
-    # Título alterado de Minuta: para Relatório:
     st.subheader("Relatório:")
     
     if processar:
