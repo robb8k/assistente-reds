@@ -75,46 +75,6 @@ with col1:
     )
     
     st.subheader("Dados (Cena / Retorno)")
-    
-    # Sistema de Gravação de Áudio com Diagnóstico de Erro Detalhado
-    st.markdown("🎙️")
-    audio_bytes = st.audio_input("Grave o relato da ocorrência falando ao microfone:")
-    
-    if audio_bytes is not None:
-        audio_hash = hash(audio_bytes.getvalue())
-        if "ultimo_audio" not in st.session_state or st.session_state.ultimo_audio != audio_hash:
-            st.session_state.ultimo_audio = audio_hash
-            with st.spinner("A transcrever áudio do microfone..."):
-                tmp_path = None
-                try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-                        tmp.write(audio_bytes.read())
-                        tmp_path = tmp.name
-                    
-                    with open(tmp_path, "rb") as f:
-                        transcript = client.audio.transcriptions.create(
-                            model="whisper-1",
-                            file=f,
-                            language="pt"
-                        )
-                    novo_texto = transcript.text
-                    
-                    if novo_texto and novo_texto.strip():
-                        if st.session_state.relato_acumulado.strip():
-                            st.session_state.relato_acumulado += f"\n{novo_texto}"
-                        else:
-                            st.session_state.relato_acumulado = novo_texto
-                            
-                        st.success("Áudio transcrito e adicionado ao relato com sucesso!")
-                    else:
-                        st.warning("⚠️ O áudio foi gravado, mas a transcrição veio vazia.")
-                        
-                    os.unlink(tmp_path)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ Erro detalhado na transcrição Whisper: {str(e)}")
-                    if tmp_path and os.path.exists(tmp_path):
-                        os.unlink(tmp_path)
 
     # Callback para manter o texto sincronizado no session_state em tempo real
     def atualizar_relato():
@@ -135,13 +95,11 @@ with col1:
         st.session_state.relato_acumulado = ""
         st.session_state.lista_fotos = []
         st.session_state.ultimo_resultado = ""
-        if "ultimo_audio" in st.session_state:
-            del st.session_state.ultimo_audio
         st.rerun()
 
     st.markdown("---")
     
-    # Sistema de Documentos robusto
+    # Sistema de Documentos robusto e isolado
     st.markdown("📎 **Documentos:**")
     fich_carregados = st.file_uploader(
         "Abrir arquivo:", 
@@ -178,7 +136,7 @@ with col1:
                 try:
                     st.image(item["bytes"], use_container_width=True)
                 except:
-                    st.info("Ficheiro carregado (pré-visualização gráfica indisponível para este formato).")
+                    st.info("Ficheiro carregado com sucesso.")
                 
                 if st.button("❌ Remover", key=f"rem_{idx}"):
                     st.session_state.lista_fotos.pop(idx)
@@ -196,13 +154,13 @@ with col2:
     
     if processar:
         if not relato_bruto.strip() and not st.session_state.lista_fotos:
-            st.warning("⚠️ Validação: Insira um relato de texto/voz ou adicione ao menos uma foto/documento para prosseguir.")
+            st.warning("⚠️ Validação: Insira um relato de texto ou adicione ao menos uma foto/documento para prosseguir.")
         else:
             SYSTEM_INSTRUCTION_REDS = f"""
             Você é o Assistente Técnico Especialista em Registros Operacionais e Auditoria de Ocorrências do CBMMG.
             A natureza operacional selecionada para esta ocorrência é: {natureza_ocorrencia}.
 
-            DIRETRIZES TÉCNICAS E JURÍDICAS MANDATÓRIAS:
+            DIRETRIZES TÉCNICAS И JURÍDICAS MANDATÓRIAS:
             1. FIDELIDADE FACTUAL ESTATUÁRIA: O documento normativo diz o que deve ser feito; o histórico registra o que foi REALMENTE feito. Não presuma procedimentos, técnicas ou dados clínicos não informados.
             2. VEDAÇÃO A TERMOS GENÉRICOS: Nunca utilize expressões vagas como "procedimentos de praxe", "cuidados pertinentes" ou "conforme protocolo". Descreva a conduta real ou limite-se aos fatos citados.
             3. RELATO DE TERCEIRO VS. CONSTATAÇÃO DA EQUIPE: Toda dinâmica de acidente, perda de controle ou autoria não testemunhada diretamente pela guarnição/equipe DEVE ser atribuída formalmente ao declarante.
@@ -213,7 +171,7 @@ with col2:
             FORMATO ESTRITO DE RESPOSTA (DIVIDIDO EM 3 BLOCOS):
             ### BLOCO A: CAMPOS ESTRUTURADOS (Extraia com precisão cirúrgica todos os dados de nomes, CPFs, RGs, idades e veículos vindos do texto e de todas as imagens enviadas)
             ### BLOCO B: HISTÓRICO NARRATIVO COMPLETO (Redigido com clareza técnica militar e impessoalidade)
-            ### BLOCO C: AUDITORIA TÉCNICA И PENDÊNCIAS (Apontando riscos de glosa, inconsistências e dados faltantes críticos)
+            ### BLOCO C: AUDITORIA TÉCNICA E PENDÊNCIAS (Apontando riscos de glosa, inconsistências e dados faltantes críticos)
             """
 
             with st.spinner(f"A ler documentos, analisar evidências e gerar relatório ({natureza_ocorrencia})..."):
