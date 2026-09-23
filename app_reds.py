@@ -3,6 +3,7 @@ from openai import OpenAI
 import tempfile
 import os
 import base64
+import urllib.parse
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -119,24 +120,21 @@ with col1:
 
     st.markdown("---")
     
-    # Sistema de upload unificado e robusto (compatível com PC e câmara/galeria do telemóvel)
+    # Sistema de upload abrindo o explorador/provedores nativos do telemóvel (Galeria, Drive, Ficheiros, Câmara)
     st.markdown("📎 **Evidências e Documentos:**")
     fich_carregados = st.file_uploader(
-        "Carregar documentos, fotos da cena ou tirar foto (via telemóvel):", 
+        "Selecione da Galeria, Google Drive ou Câmara:", 
         type=["jpg", "png", "jpeg"], 
         accept_multiple_files=True,
         key="upload_unificado"
     )
     
     if fich_carregados:
-        # Botão para consolidar as fotos na lista acumulada da sessão
         if st.button("Adicionar Evidências Selecionadas"):
             for f in fich_carregados:
-                # Lê os bytes de forma segura para garantir compatibilidade com a IA e PDF
                 conteudo_bytes = f.read()
                 tipo_mime = f.type if f.type else "image/jpeg"
                 
-                # Evita duplicados exatos pelo nome e tamanho
                 ja_existe = any(item["nome"] == f.name and len(item["bytes"]) == len(conteudo_bytes) for item in st.session_state.lista_fotos)
                 if not ja_existe:
                     st.session_state.lista_fotos.append({
@@ -213,18 +211,51 @@ with col2:
                     )
                     
                     resultado = response.choices[0].message.content
-                    st.markdown(resultado)
                     
-                    st.markdown("---")
-                    pdf_path = gerar_pdf(resultado)
-                    with open(pdf_path, "rb") as f:
-                        st.download_button(
-                            label="📥 Descarregar Relatório Oficial em PDF",
-                            data=f,
-                            file_name="Minuta_Auditoria_REDS.pdf",
-                            mime="application/pdf",
-                            use_container_width=True
-                        )
+                    # Guarda o resultado no session_state para manter visível e permitir partilha
+                    st.session_state.ultimo_resultado = resultado
                     
                 except Exception as e:
                     st.error(f"Erro no processamento da IA: {e}")
+
+    # Exibe o resultado se ele existir na sessão
+    if "ultimo_resultado" in st.session_state and st.session_state.ultimo_resultado:
+        st.markdown(st.session_state.ultimo_resultado)
+        
+        st.markdown("---")
+        st.subheader("📤 Exportação e Partilha:")
+        
+        # Gera o PDF para download
+        pdf_path = gerar_pdf(st.session_state.ultimo_resultado)
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+            
+        col_pdf, col_wapp, col_mail = st.columns(3)
+        
+        with col_pdf:
+            st.download_button(
+                label="📥 Baixar PDF",
+                data=pdf_bytes,
+                file_name="Minuta_Auditoria_REDS.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+            
+        with col_wapp:
+            # Prepara link codificado para o WhatsApp
+            texto_wapp = urllib.parse.quote(f"*MINUTA DE REDS - EASY REDS*\n\n{st.session_state.ultimo_resultado}")
+            url_whatsapp = f"https://api.whatsapp.com/send?text={texto_wapp}"
+            st.markdown(
+                f'<a href="{url_whatsapp}" target="_blank"><button style="width:100%; background-color:#25D366; color:white; border:none; padding:10px; border-radius:5px; font-weight:bold; cursor:pointer;">🟢 WhatsApp</button></a>',
+                unsafe_allow_html=True
+            )
+            
+        with col_mail:
+            # Prepara link codificado para E-mail
+            assunto_mail = urllib.parse.quote("Minuta de Ocorrência - Easy REDS")
+            corpo_mail = urllib.parse.quote(st.session_state.ultimo_resultado)
+            url_email = f"mailto:?subject={assunto_mail}&body={corpo_mail}"
+            st.markdown(
+                f'<a href="{url_email}" target="_blank"><button style="width:100%; background-color:#0078D4; color:white; border:none; padding:10px; border-radius:5px; font-weight:bold; cursor:pointer;">📧 E-mail</button></a>',
+                unsafe_allow_html=True
+            )
