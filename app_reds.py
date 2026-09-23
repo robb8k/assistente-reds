@@ -24,7 +24,7 @@ if "relato_acumulado" not in st.session_state:
     st.session_state.relato_acumulado = ""
 
 if "lista_fotos" not in st.session_state:
-    st.session_state.lista_fotos = [] # Lista para guardar os bytes e tipos das fotos acumuladas
+    st.session_state.lista_fotos = []
 
 # Função para gerar PDF formatado
 def gerar_pdf(conteudo_texto):
@@ -118,16 +118,28 @@ with col1:
         st.rerun()
 
     st.markdown("---")
-    st.markdown("📸 **Gestão de Evidências e Documentos (Múltiplas Fotos):**")
     
-    # Seleção do método de adição acumulativa
-    metodo_captura = st.radio("Adicionar evidência via:", ["Tirar Foto (Câmara)", "Carregar Ficheiros (Galeria)"], horizontal=True)
+    # Estilo compacto estilo WhatsApp para anexos (Grampo e Câmara lado a lado)
+    st.markdown("📎 **Adicionar Evidências e Documentos:**")
+    col_grampo, col_cam = st.columns(2)
     
-    if metodo_captura == "Tirar Foto (Câmara)":
-        foto_capturada = st.camera_input("Aperte para capturar documento ou cena:")
+    with col_grampo:
+        fich_carregados = st.file_uploader("📁 Carregar Ficheiros", type=["jpg", "png", "jpeg"], accept_multiple_files=True, key="up_multiplos")
+        if fich_carregados:
+            if st.button("Confirmar Ficheiros"):
+                for f in fich_carregados:
+                    st.session_state.lista_fotos.append({
+                        "bytes": f.read(),
+                        "type": f.type if f.type else "image/jpeg",
+                        "nome": f.name
+                    })
+                st.success(f"{len(fich_carregados)} ficheiro(s) adicionado(s)!")
+                st.rerun()
+
+    with col_cam:
+        foto_capturada = st.camera_input("📷 Tirar Foto (Câmara)")
         if foto_capturada is not None:
             foto_hash = hash(foto_capturada.getvalue())
-            # Verifica se esta foto específica já foi adicionada para evitar loops
             if "ultima_foto_hash" not in st.session_state or st.session_state.ultima_foto_hash != foto_hash:
                 st.session_state.ultima_foto_hash = foto_hash
                 st.session_state.lista_fotos.append({
@@ -135,31 +147,25 @@ with col1:
                     "type": "image/jpeg",
                     "nome": f"Foto_Camera_{len(st.session_state.lista_fotos)+1}.jpg"
                 })
-                st.success("Foto adicionada à lista de evidências com sucesso!")
-                st.rerun()
-    else:
-        fich_carregados = st.file_uploader("Selecione um ou mais documentos/fotos:", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
-        if fich_carregados:
-            # Botão para consolidar os uploads múltiplos na lista acumulada
-            if st.button("Adicionar Ficheiros Selecionados à Ocorrência"):
-                for f in fich_carregados:
-                    st.session_state.lista_fotos.append({
-                        "bytes": f.read(),
-                        "type": f.type if f.type else "image/jpeg",
-                        "nome": f.name
-                    })
-                st.success(f"{len(fich_carregados)} ficheiro(s) adicionado(s) com sucesso!")
+                st.success("Foto da câmara adicionada!")
                 st.rerun()
 
-    # Exibe miniaturas das fotos acumuladas até o momento com opção de limpar
+    # Exibição compacta das evidências em formato de lista lateral (lado a lado) com opção de expansão
     if st.session_state.lista_fotos:
-        st.markdown(f"**Evidências acumuladas prontas para envio ({len(st.session_state.lista_fotos)}):**")
-        cols_mini = st.columns(min(len(st.session_state.lista_fotos), 4))
-        for idx, item in enumerate(st.session_state.lista_fotos):
-            with cols_mini[idx % 4]:
-                st.image(item["bytes"], caption=item["nome"], width=100)
+        st.markdown(f"**Evidências anexadas ({len(st.session_state.lista_fotos)}):** Click para expandir")
         
-        if st.button("🗑️ Limpar Todas as Fotos Acumuladas"):
+        # Cria grelha lado a lado para ocupar pouco espaço vertical
+        cols_Grelha = st.columns(min(len(st.session_state.lista_fotos), 3))
+        for idx, item in enumerate(st.session_state.lista_fotos):
+            with cols_Grelha[idx % 3]:
+                # Usa expander para a imagem ficar oculta/limpa e só abrir se o utilizador clicar
+                with st.expander(f"📄 {item['nome']} (Ver)"):
+                    st.image(item["bytes"], use_container_width=True)
+                    if st.button("❌ Remover", key=f"rem_{idx}"):
+                        st.session_state.lista_fotos.pop(idx)
+                        st.rerun()
+        
+        if st.button("🗑️ Limpar Todas as Evidências"):
             st.session_state.lista_fotos = []
             if "ultima_foto_hash" in st.session_state:
                 del st.session_state.ultima_foto_hash
@@ -195,7 +201,6 @@ with col2:
 
             with st.spinner(f"A analisar todas as evidências e auditar ocorrência ({natureza_ocorrencia})..."):
                 try:
-                    # Monta o payload multimodal contendo o texto e todas as fotos da lista acumulada
                     conteudo_mensagem = [{"type": "text", "text": f"DADOS DA OCORRÊNCIA E RELATO:\n{relato_bruto}"}]
                     
                     for foto in st.session_state.lista_fotos:
@@ -210,7 +215,7 @@ with col2:
                     response = client.chat.completions.create(
                         model="gpt-4o-mini",
                         messages=[
-                            {"record": "system", "role": "system", "content": SYSTEM_INSTRUCTION_REDS},
+                            {"role": "system", "content": SYSTEM_INSTRUCTION_REDS},
                             {"role": "user", "content": conteudo_mensagem}
                         ],
                         temperature=0.1
