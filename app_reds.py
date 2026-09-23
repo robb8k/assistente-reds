@@ -11,13 +11,12 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.set_page_config(
-    page_title="Assistente de Confeção e Auditoria de Registros Operacionais",
+    page_title="Easy REDS",
     layout="wide"
 )
 
 st.markdown("""
-# 📋 Assistente Avançado de Confeção e Auditoria de Registros Operacionais
-*Motor de Inteligência Artificial com Visão Computacional, Transcrição Acumulativa de Voz e Conformidade Doutrinária*
+# 📋 Easy REDS
 """)
 
 # Inicializa o estado de sessão para acumular o texto do relato caso não exista
@@ -86,14 +85,13 @@ FORMATO ESTRITO DE RESPOSTA (DIVIDIDO EM 3 BLOCOS):
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("1. Coleta Operacional (Cena / Retorno)")
+    st.subheader("Dados (Cena / Retorno)")
     
-    # Recurso de Gravação Direta por Microfone
-    st.markdown("🎙️ **Gravação Direta de Voz (Acumulativa):**")
+    # Recurso de Gravação Direta por Microfone com símbolo minimalista
+    st.markdown("🎙️")
     audio_bytes = st.audio_input("Grave o relato da ocorrência falando ao microfone:")
     
     if audio_bytes is not None:
-        # Cria uma chave única baseada no tamanho do áudio para evitar duplicar o processamento do mesmo clique
         audio_hash = hash(audio_bytes.getvalue())
         if "ultimo_audio" not in st.session_state or st.session_state.ultimo_audio != audio_hash:
             st.session_state.ultimo_audio = audio_hash
@@ -110,7 +108,6 @@ with col1:
                         )
                     novo_texto = transcript.text
                     
-                    # Adiciona o novo texto ao acumulado anterior separando por quebra de linha
                     if st.session_state.relato_acumulado.strip():
                         st.session_state.relato_acumulado += f"\n{novo_texto}"
                     else:
@@ -118,11 +115,10 @@ with col1:
                         
                     st.success("Áudio transcrito e adicionado ao relato com sucesso!")
                     os.unlink(tmp_path)
-                    st.rerun() # Atualiza a tela para refletir o texto na caixa
+                    st.rerun()
                 except Exception as e:
                     st.error(f"Erro na transcrição por microfone: {e}")
 
-    # Caixa de texto vinculada diretamente ao session_state para permitir edição e acumulação
     relato_bruto = st.text_area(
         "Relato Bruto da Guarnição / Equipe:",
         value=st.session_state.relato_acumulado,
@@ -130,21 +126,18 @@ with col1:
         placeholder="Ex: Equipe empenhada em acidente de trânsito na via..."
     )
     
-    # Atualiza o estado caso o utilizador edite manualmente o texto na caixa
     st.session_state.relato_acumulado = relato_bruto
     
-    # Botão para limpar o histórico do relato se necessário
     if st.button("Limpar Relato Bruto"):
         st.session_state.relato_acumulado = ""
         st.rerun()
 
-    # Upload de Imagens (Documentos, RGs, CPFs, Cenas)
     uploaded_file = st.file_uploader("Evidências Visuais e Documentos (RG, CPF, CNH, Fotos da Cena):", type=["jpg", "png", "jpeg"])
     
     processar = st.button("Processar, Ler Documentos e Auditar Ocorrência", type="primary", use_container_width=True)
 
 with col2:
-    st.subheader("2. Minuta Estruturada e Auditoria Normativa")
+    st.subheader("Minuta:")
     
     if processar:
         if not relato_bruto.strip() and not uploaded_file:
