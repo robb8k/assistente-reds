@@ -61,7 +61,7 @@ def gerar_pdf(conteudo_texto):
 col1, col2 = st.columns(2)
 
 with col1:
-    # Seletor de Natureza atualizado com Salvamento (Altura, Aquático, Terrestre)
+    # Seletor de Natureza
     natureza_ocorrencia = st.selectbox(
         "Selecione a Natureza:",
         [
@@ -76,47 +76,35 @@ with col1:
     
     st.subheader("Dados (Cena / Retorno)")
     
-    # Recurso de Gravação Direta por Microfone com tratamento de ficheiro robusto
+    # Recurso de Gravação Direta por Microfone (Lógica Corrigida)
     st.markdown("🎙️")
     audio_bytes = st.audio_input("Grave o relato da ocorrência falando ao microfone:")
     
     if audio_bytes is not None:
         audio_hash = hash(audio_bytes.getvalue())
+        # Só tenta transcrever se este áudio ainda não tiver sido processado com sucesso
         if "ultimo_audio" not in st.session_state or st.session_state.ultimo_audio != audio_hash:
-            st.session_state.ultimo_audio = audio_hash
             with st.spinner("A transcrever áudio do microfone..."):
-                tmp_path = None
                 try:
-                    # Cria um ficheiro temporário seguro para o Whisper processar
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-                        tmp.write(audio_bytes.getvalue())
-                        tmp_path = tmp.name
-                    
-                    # Abre e envia para a API da OpenAI com segurança
-                    with open(tmp_path, "rb") as f:
-                        transcript = client.audio.transcriptions.create(
-                            model="whisper-1",
-                            file=f,
-                            language="pt"
-                        )
+                    # Envia o áudio diretamente da memória (sem guardar no disco do servidor) garantindo compatibilidade
+                    transcript = client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=("audio.webm", audio_bytes.getvalue())
+                    )
                     novo_texto = transcript.text
                     
                     if st.session_state.relato_acumulado.strip():
                         st.session_state.relato_acumulado += f"\n{novo_texto}"
                     else:
                         st.session_state.relato_acumulado = novo_texto
-                        
+                    
+                    # Regista o sucesso apenas SE a transcrição funcionou
+                    st.session_state.ultimo_audio = audio_hash
+                    
                     st.success("Áudio transcrito e adicionado ao relato com sucesso!")
+                    st.rerun()
                 except Exception as e:
-                    st.error(f"Erro na transcrição por microfone: {e}")
-                finally:
-                    # Garante a limpeza do ficheiro temporário do sistema
-                    if tmp_path and os.path.exists(tmp_path):
-                        try:
-                            os.unlink(tmp_path)
-                        except:
-                            pass
-                st.rerun()
+                    st.error(f"Erro na transcrição por microfone: Verifique a sua ligação ou a chave API. (Detalhe: {e})")
 
     # Callback para manter o texto sincronizado no session_state em tempo real
     def atualizar_relato():
@@ -137,6 +125,8 @@ with col1:
         st.session_state.relato_acumulado = ""
         st.session_state.lista_fotos = []
         st.session_state.ultimo_resultado = ""
+        if "ultimo_audio" in st.session_state:
+            del st.session_state.ultimo_audio
         st.rerun()
 
     st.markdown("---")
@@ -185,7 +175,6 @@ with col1:
     processar = st.button("Gerar Relatório", type="primary", use_container_width=True)
 
 with col2:
-    # Título oficial
     st.subheader("Relatório:")
     
     if processar:
