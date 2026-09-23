@@ -17,8 +17,12 @@ st.set_page_config(
 
 st.markdown("""
 # 📋 Assistente Avançado de Confeção e Auditoria de Registros Operacionais
-*Motor de Inteligência Artificial com Visão Computacional, Transcrição de Voz e Conformidade Doutrinária*
+*Motor de Inteligência Artificial com Visão Computacional, Transcrição Acumulativa de Voz e Conformidade Doutrinária*
 """)
+
+# Inicializa o estado de sessão para acumular o texto do relato caso não exista
+if "relato_acumulado" not in st.session_state:
+    st.session_state.relato_acumulado = ""
 
 # Função para gerar PDF formatado
 def gerar_pdf(conteudo_texto):
@@ -84,37 +88,56 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("1. Coleta Operacional (Cena / Retorno)")
     
-    # Recurso de Gravação Direta por Microfone (Push-to-talk / Áudio Nativo)
-    st.markdown("🎙️ **Gravação Direta de Voz (Microfone):**")
+    # Recurso de Gravação Direta por Microfone
+    st.markdown("🎙️ **Gravação Direta de Voz (Acumulativa):**")
     audio_bytes = st.audio_input("Grave o relato da ocorrência falando ao microfone:")
     
-    transcricao_voz = ""
     if audio_bytes is not None:
-        with st.spinner("A transcrever áudio do microfone com inteligência artificial..."):
-            try:
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-                    tmp.write(audio_bytes.read())
-                    tmp_path = tmp.name
-                
-                with open(tmp_path, "rb") as f:
-                    transcript = client.audio.transcriptions.create(
-                        model="whisper-1",
-                        file=f
-                    )
-                transcricao_voz = transcript.text
-                st.success("Áudio transcrito e incorporado com sucesso!")
-                os.unlink(tmp_path)
-            except Exception as e:
-                st.error(f"Erro na transcrição por microfone: {e}")
+        # Cria uma chave única baseada no tamanho do áudio para evitar duplicar o processamento do mesmo clique
+        audio_hash = hash(audio_bytes.getvalue())
+        if "ultimo_audio" not in st.session_state or st.session_state.ultimo_audio != audio_hash:
+            st.session_state.ultimo_audio = audio_hash
+            with st.spinner("A transcrever áudio do microfone..."):
+                try:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                        tmp.write(audio_bytes.read())
+                        tmp_path = tmp.name
+                    
+                    with open(tmp_path, "rb") as f:
+                        transcript = client.audio.transcriptions.create(
+                            model="whisper-1",
+                            file=f
+                        )
+                    novo_texto = transcript.text
+                    
+                    # Adiciona o novo texto ao acumulado anterior separando por quebra de linha
+                    if st.session_state.relato_acumulado.strip():
+                        st.session_state.relato_acumulado += f"\n{novo_texto}"
+                    else:
+                        st.session_state.relato_acumulado = novo_texto
+                        
+                    st.success("Áudio transcrito e adicionado ao relato com sucesso!")
+                    os.unlink(tmp_path)
+                    st.rerun() # Atualiza a tela para refletir o texto na caixa
+                except Exception as e:
+                    st.error(f"Erro na transcrição por microfone: {e}")
 
-    # Combina texto digitado ou gerado por voz
+    # Caixa de texto vinculada diretamente ao session_state para permitir edição e acumulação
     relato_bruto = st.text_area(
         "Relato Bruto da Guarnição / Equipe:",
-        value=transcricao_voz if transcricao_voz else "",
+        value=st.session_state.relato_acumulado,
         height=220,
         placeholder="Ex: Equipe empenhada em acidente de trânsito na via..."
     )
     
+    # Atualiza o estado caso o utilizador edite manualmente o texto na caixa
+    st.session_state.relato_acumulado = relato_bruto
+    
+    # Botão para limpar o histórico do relato se necessário
+    if st.button("Limpar Relato Bruto"):
+        st.session_state.relato_acumulado = ""
+        st.rerun()
+
     # Upload de Imagens (Documentos, RGs, CPFs, Cenas)
     uploaded_file = st.file_uploader("Evidências Visuais e Documentos (RG, CPF, CNH, Fotos da Cena):", type=["jpg", "png", "jpeg"])
     
@@ -129,13 +152,11 @@ with col2:
         else:
             with st.spinner(f"A analisar documentos e auditar ocorrência ({natureza_ocorrencia})..."):
                 try:
-                    # Monta o conteúdo multimodal (Texto + Imagem opcional)
                     conteudo_mensagem = [{"type": "text", "text": f"DADOS DA OCORRÊNCIA E RELATO:\n{relato_bruto}"}]
                     
                     if uploaded_file is not None:
                         image_bytes = uploaded_file.read()
                         encoded_image = base64.b64encode(image_bytes).decode("utf-8")
-                        # Determina o tipo MIME correto baseado na extensão
                         mime_type = uploaded_file.type if uploaded_file.type else "image/jpeg"
                         
                         conteudo_mensagem.append({
@@ -145,7 +166,6 @@ with col2:
                             }
                         })
                     
-                    # Chamada utilizando o modelo gpt-4o-mini com suporte a visão e texto
                     response = client.chat.completions.create(
                         model="gpt-4o-mini",
                         messages=[
@@ -158,7 +178,6 @@ with col2:
                     resultado = response.choices[0].message.content
                     st.markdown(resultado)
                     
-                    # Botão de Exportação em PDF
                     st.markdown("---")
                     pdf_path = gerar_pdf(resultado)
                     with open(pdf_path, "rb") as f:
