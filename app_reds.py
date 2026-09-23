@@ -128,9 +128,9 @@ with col1:
     
     st.subheader("Dados:")
     
-    # Sistema de Gravação de Áudio com legenda atualizada
+    # Sistema de Gravação de Áudio (rótulo redundante apagado, mantendo apenas o componente de voz)
     st.markdown("🎙️ **gravar:**")
-    audio_rec = st.audio_input("Audio/transcrever:")
+    audio_rec = st.audio_input("gravar")
     
     if audio_rec is not None:
         audio_bytes = audio_rec.getvalue()
@@ -175,7 +175,7 @@ with col1:
                         except:
                             pass
 
-    # Caixa de texto com título Relato e placeholder em branco
+    # Caixa de texto com título Relato
     relato_bruto = st.text_area(
         "Relato:",
         value=st.session_state.relato_acumulado,
@@ -185,7 +185,7 @@ with col1:
     
     st.session_state.relato_acumulado = relato_bruto
 
-    if st.button("Limpar Relato Bruto"):
+    if st.button("Limpar"):
         st.session_state.relato_acumulado = ""
         st.session_state.lista_fotos = []
         st.session_state.ultimo_resultado = ""
@@ -194,7 +194,7 @@ with col1:
 
     st.markdown("---")
     
-    # Sistema de Documentos com label atualizada para Ficheiros:
+    # Sistema de Documentos
     fich_carregados = st.file_uploader(
         "Ficheiros:", 
         type=["jpg", "jpeg", "png", "webp", "pdf"],
