@@ -119,25 +119,32 @@ with col1:
 
     st.markdown("---")
     
-    # Estilo compacto estilo WhatsApp para anexos (Grampo e Câmara lado a lado)
-    st.markdown("📎 **Adicionar Evidências e Documentos:**")
-    col_grampo, col_cam = st.columns(2)
+    # Menu Estilo WhatsApp (Botão de Anexo com o símbolo de Grampo 📎)
+    st.markdown("📎 **Anexar Evidências e Documentos:**")
     
-    with col_grampo:
-        fich_carregados = st.file_uploader("📁 Carregar Ficheiros", type=["jpg", "png", "jpeg"], accept_multiple_files=True, key="up_multiplos")
+    opcao_anexo = st.selectbox(
+        "Escolha a ação de anexo:",
+        ["Selecione...", "📁 Fotos e Vídeos (Galeria)", "📷 Tirar Foto com a Câmara"],
+        key="menu_anexo"
+    )
+    
+    # Apenas exibe o componente correspondente se o utilizador selecionar explicitamente no menu
+    if opcao_anexo == "📁 Fotos e Vídeos (Galeria)":
+        fich_carregados = st.file_uploader("Selecione um ou mais documentos/fotos:", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
         if fich_carregados:
-            if st.button("Confirmar Ficheiros"):
+            if st.button("Adicionar à Ocorrência"):
                 for f in fich_carregados:
                     st.session_state.lista_fotos.append({
                         "bytes": f.read(),
                         "type": f.type if f.type else "image/jpeg",
                         "nome": f.name
                     })
-                st.success(f"{len(fich_carregados)} ficheiro(s) adicionado(s)!")
+                st.success(f"{len(fich_carregados)} ficheiro(s) adicionado(s) com sucesso!")
                 st.rerun()
-
-    with col_cam:
-        foto_capturada = st.camera_input("📷 Tirar Foto (Câmara)")
+                
+    elif opcao_anexo == "📷 Tirar Foto com a Câmara":
+        st.info("Aponte a câmara e clique no botão para capturar:")
+        foto_capturada = st.camera_input("Capturar imagem")
         if foto_capturada is not None:
             foto_hash = hash(foto_capturada.getvalue())
             if "ultima_foto_hash" not in st.session_state or st.session_state.ultima_foto_hash != foto_hash:
@@ -147,23 +154,19 @@ with col1:
                     "type": "image/jpeg",
                     "nome": f"Foto_Camera_{len(st.session_state.lista_fotos)+1}.jpg"
                 })
-                st.success("Foto da câmara adicionada!")
+                st.success("Foto capturada e adicionada com sucesso!")
                 st.rerun()
 
-    # Exibição compacta das evidências em formato de lista lateral (lado a lado) com opção de expansão
+    # Exibição limpa e compacta das evidências em formato de lista expansível
     if st.session_state.lista_fotos:
-        st.markdown(f"**Evidências anexadas ({len(st.session_state.lista_fotos)}):** Click para expandir")
+        st.markdown(f"**Evidências anexadas ({len(st.session_state.lista_fotos)}):** Clique para conferir")
         
-        # Cria grelha lado a lado para ocupar pouco espaço vertical
-        cols_Grelha = st.columns(min(len(st.session_state.lista_fotos), 3))
         for idx, item in enumerate(st.session_state.lista_fotos):
-            with cols_Grelha[idx % 3]:
-                # Usa expander para a imagem ficar oculta/limpa e só abrir se o utilizador clicar
-                with st.expander(f"📄 {item['nome']} (Ver)"):
-                    st.image(item["bytes"], use_container_width=True)
-                    if st.button("❌ Remover", key=f"rem_{idx}"):
-                        st.session_state.lista_fotos.pop(idx)
-                        st.rerun()
+            with st.expander(f"📄 {item['nome']} (Ver imagem)"):
+                st.image(item["bytes"], use_container_width=True)
+                if st.button("❌ Remover esta foto", key=f"rem_{idx}"):
+                    st.session_state.lista_fotos.pop(idx)
+                    st.rerun()
         
         if st.button("🗑️ Limpar Todas as Evidências"):
             st.session_state.lista_fotos = []
