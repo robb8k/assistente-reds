@@ -19,9 +19,12 @@ st.markdown("""
 # 📋 Easy REDS
 """)
 
-# Inicializa o estado de sessão para acumular o texto do relato caso não exista
+# Inicializa os estados de sessão para acumular texto e fotos
 if "relato_acumulado" not in st.session_state:
     st.session_state.relato_acumulado = ""
+
+if "lista_fotos" not in st.session_state:
+    st.session_state.lista_fotos = [] # Lista para guardar os bytes e tipos das fotos acumuladas
 
 # Função para gerar PDF formatado
 def gerar_pdf(conteudo_texto):
@@ -54,7 +57,7 @@ def gerar_pdf(conteudo_texto):
 col1, col2 = st.columns(2)
 
 with col1:
-    # Seletor de Natureza posicionado na página principal, acima de Dados (Cena / Retorno)
+    # Seletor de Natureza
     natureza_ocorrencia = st.selectbox(
         "Selecione a Natureza:",
         [
@@ -69,7 +72,7 @@ with col1:
     
     st.subheader("Dados (Cena / Retorno)")
     
-    # Recurso de Gravação Direta por Microfone com símbolo minimalista
+    # Recurso de Gravação Direta por Microfone
     st.markdown("🎙️")
     audio_bytes = st.audio_input("Grave o relato da ocorrência falando ao microfone:")
     
@@ -114,28 +117,63 @@ with col1:
         st.session_state.relato_acumulado = ""
         st.rerun()
 
-    # Abas para alternar entre Upload de ficheiro ou uso da Câmara do telemóvel/computador
-    st.markdown("📸 **Evidências Visuais e Documentos:**")
-    tipo_entrada_midia = st.radio("Escolha o método de captura da imagem:", ["Carregar Ficheiro", "Tirar Foto com a Câmara"], horizontal=True)
+    st.markdown("---")
+    st.markdown("📸 **Gestão de Evidências e Documentos (Múltiplas Fotos):**")
     
-    imagem_selecionada = None
-    if tipo_entrada_midia == "Carregar Ficheiro":
-        uploaded_file = st.file_uploader("Selecione a imagem (RG, CPF, CNH ou Cena):", type=["jpg", "png", "jpeg"])
-        if uploaded_file is not None:
-            imagem_selecionada = uploaded_file
+    # Seleção do método de adição acumulativa
+    metodo_captura = st.radio("Adicionar evidência via:", ["Tirar Foto (Câmara)", "Carregar Ficheiros (Galeria)"], horizontal=True)
+    
+    if metodo_captura == "Tirar Foto (Câmara)":
+        foto_capturada = st.camera_input("Aperte para capturar documento ou cena:")
+        if foto_capturada is not None:
+            foto_hash = hash(foto_capturada.getvalue())
+            # Verifica se esta foto específica já foi adicionada para evitar loops
+            if "ultima_foto_hash" not in st.session_state or st.session_state.ultima_foto_hash != foto_hash:
+                st.session_state.ultima_foto_hash = foto_hash
+                st.session_state.lista_fotos.append({
+                    "bytes": foto_capturada.getvalue(),
+                    "type": "image/jpeg",
+                    "nome": f"Foto_Camera_{len(st.session_state.lista_fotos)+1}.jpg"
+                })
+                st.success("Foto adicionada à lista de evidências com sucesso!")
+                st.rerun()
     else:
-        camera_file = st.camera_input("Tire uma foto com a câmara:")
-        if camera_file is not None:
-            imagem_selecionada = camera_file
+        fich_carregados = st.file_uploader("Selecione um ou mais documentos/fotos:", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+        if fich_carregados:
+            # Botão para consolidar os uploads múltiplos na lista acumulada
+            if st.button("Adicionar Ficheiros Selecionados à Ocorrência"):
+                for f in fich_carregados:
+                    st.session_state.lista_fotos.append({
+                        "bytes": f.read(),
+                        "type": f.type if f.type else "image/jpeg",
+                        "nome": f.name
+                    })
+                st.success(f"{len(fich_carregados)} ficheiro(s) adicionado(s) com sucesso!")
+                st.rerun()
 
+    # Exibe miniaturas das fotos acumuladas até o momento com opção de limpar
+    if st.session_state.lista_fotos:
+        st.markdown(f"**Evidências acumuladas prontas para envio ({len(st.session_state.lista_fotos)}):**")
+        cols_mini = st.columns(min(len(st.session_state.lista_fotos), 4))
+        for idx, item in enumerate(st.session_state.lista_fotos):
+            with cols_mini[idx % 4]:
+                st.image(item["bytes"], caption=item["nome"], width=100)
+        
+        if st.button("🗑️ Limpar Todas as Fotos Acumuladas"):
+            st.session_state.lista_fotos = []
+            if "ultima_foto_hash" in st.session_state:
+                del st.session_state.ultima_foto_hash
+            st.rerun()
+
+    st.markdown("---")
     processar = st.button("Processar, Ler Documentos e Auditar Ocorrência", type="primary", use_container_width=True)
 
 with col2:
     st.subheader("Minuta:")
     
     if processar:
-        if not relato_bruto.strip() and not imagem_selecionada:
-            st.warning("⚠️ Validação Pré-auditoria: Insira um relato de texto/voz ou adicione uma imagem/foto para prosseguir.")
+        if not relato_bruto.strip() and not st.session_state.lista_fotos:
+            st.warning("⚠️ Validação Pré-auditoria: Insira um relato de texto/voz ou adicione ao menos uma foto/documento para prosseguir.")
         else:
             SYSTEM_INSTRUCTION_REDS = f"""
             Você é o Assistente Técnico Especialista em Registros Operacionais e Auditoria de Ocorrências do CBMMG.
@@ -147,34 +185,32 @@ with col2:
             3. RELATO DE TERCEIRO VS. CONSTATAÇÃO DA EQUIPE: Toda dinâmica de acidente, perda de controle ou autoria não testemunhada diretamente pela guarnição/equipe DEVE ser atribuída formalmente ao declarante.
             4. CONCISÃO E ECONOMIA DE DADOS NO HISTÓRICO: Evite poluir o texto com números de placas, prefixos e matrículas que já possuem campos específicos no sistema.
             5. VEDAÇÃO A DIAGNÓSTICO MÉDICO: Descreva apenas achados e queixas anatômicas/visíveis, jamais ateste diagnósticos patológicos fechados.
-            6. LEITURA DE DOCUMENTOS E IMAGENS: Se forem enviadas imagens de documentos (RGs, CPFs, CNHs) ou cenas, extraia rigorosamente todos os dados textuais visíveis nelas para compor os campos estruturados.
+            6. LEITURA DE DOCUMENTOS E IMAGENS MÚLTIPLAS: Se forem enviadas várias imagens de documentos (RGs, CPFs, CNHs de diferentes envolvidos) ou cenas, extraia rigorosamente todos os dados textuais visíveis em cada uma delas para compor os campos estruturados de forma detalhada.
 
             FORMATO ESTRITO DE RESPOSTA (DIVIDIDO EM 3 BLOCOS):
-            ### BLOCO A: CAMPOS ESTRUTURADOS (Extraia com precisão cirúrgica os dados de nomes, CPFs, RGs, idades e veículos vindos do texto e das imagens anexadas)
+            ### BLOCO A: CAMPOS ESTRUTURADOS (Extraia com precisão cirúrgica os dados de nomes, CPFs, RGs, idades e veículos vindos do texto e de todas as imagens enviadas)
             ### BLOCO B: HISTÓRICO NARRATIVO COMPLETO (Redigido com clareza técnica militar e impessoalidade)
             ### BLOCO C: AUDITORIA TÉCNICA E PENDÊNCIAS (Apontando riscos de glosa, inconsistências e dados faltantes críticos)
             """
 
-            with st.spinner(f"A analisar dados e auditar ocorrência ({natureza_ocorrencia})..."):
+            with st.spinner(f"A analisar todas as evidências e auditar ocorrência ({natureza_ocorrencia})..."):
                 try:
+                    # Monta o payload multimodal contendo o texto e todas as fotos da lista acumulada
                     conteudo_mensagem = [{"type": "text", "text": f"DADOS DA OCORRÊNCIA E RELATO:\n{relato_bruto}"}]
                     
-                    if imagem_selecionada is not None:
-                        image_bytes = imagem_selecionada.read()
-                        encoded_image = base64.b64encode(image_bytes).decode("utf-8")
-                        mime_type = imagem_selecionada.type if imagem_selecionada.type else "image/jpeg"
-                        
+                    for foto in st.session_state.lista_fotos:
+                        encoded_img = base64.b64encode(foto["bytes"]).decode("utf-8")
                         conteudo_mensagem.append({
                             "type": "image_url",
                             "image_url": {
-                                "url": f"data:{mime_type};base64,{encoded_image}"
+                                "url": f"data:{foto['type']};base64,{encoded_img}"
                             }
                         })
                     
                     response = client.chat.completions.create(
                         model="gpt-4o-mini",
                         messages=[
-                            {"role": "system", "content": SYSTEM_INSTRUCTION_REDS},
+                            {"record": "system", "role": "system", "content": SYSTEM_INSTRUCTION_REDS},
                             {"role": "user", "content": conteudo_mensagem}
                         ],
                         temperature=0.1
