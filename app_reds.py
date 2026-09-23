@@ -58,10 +58,10 @@ with col2:
                 sucesso = False
                 tentativas = 3
                 
-                # Sistema de tentativas automáticas para contornar o erro 503 de alta demanda
+                # Sistema de tentativas automáticas para contornar oscilações de rede ou alta demanda
                 for tentativa in range(tentativas):
                     try:
-                        # Utiliza o modelo flash padrão do Gemini
+                        # Utiliza o modelo flash padrão e estável do Gemini
                         model = genai.GenerativeModel(
                             model_name="gemini-1.5-flash",
                             system_instruction=SYSTEM_INSTRUCTION_REDS
@@ -76,7 +76,7 @@ with col2:
                         break
                         
                     except Exception as e:
-                        if "503" in str(e) and tentativa < tentativas - 1:
+                        if ("503" in str(e) or "404" in str(e)) and tentativa < tentativas - 1:
                             time.sleep(2) # Espera 2 segundos antes de tentar novamente
                             continue
                         else:
