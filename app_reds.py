@@ -1,9 +1,8 @@
 import streamlit as st
-import google.generativeai as genai
-import time
+from openai import OpenAI
 
-# Configura a chave da API do Gemini usando os Secrets do Streamlit
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+# Inicializa o cliente da OpenAI utilizando a chave guardada nos Secrets seguros do Streamlit
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.set_page_config(
     page_title="Assistente de Confeção e Auditoria de Registros Operacionais",
@@ -30,7 +29,7 @@ DIRETRIZES TÉCNICAS E JURÍDICAS MANDATÓRIAS:
 FORMATO ESTRITO DE RESPOSTA (DIVIDIDO EM 3 BLOCOS):
 ### BLOCO A: CAMPOS ESTRUTURADOS
 ### BLOCO B: HISTÓRICO NARRATIVO COMPLETO
-### BLOCO C: AUDITORIA TÉCNICA И PENDÊNCIAS
+### BLOCO C: AUDITORIA TÉCNICA E PENDÊNCIAS
 """
 
 col1, col2 = st.columns(2)
@@ -54,32 +53,20 @@ with col2:
         if not relato_bruto.strip():
             st.warning("Por favor, insira o relato bruto da ocorrência para prosseguir.")
         else:
-            with st.spinner("A processar e auditar ocorrência com o motor Gemini..."):
-                sucesso = False
-                tentativas = 3
-                
-                # Sistema de tentativas automáticas para contornar oscilações de rede ou alta demanda
-                for tentativa in range(tentativas):
-                    try:
-                        # Utiliza o modelo atualizado e nativo do Gemini
-                        model = genai.GenerativeModel(
-                            model_name="gemini-2.0-flash",
-                            system_instruction=SYSTEM_INSTRUCTION_REDS
-                        )
-                        
-                        response = model.generate_content(
-                            f"DADOS DA OCORRÊNCIA:\n{relato_bruto}"
-                        )
-                        
-                        st.markdown(response.text)
-                        sucesso = True
-                        break
-                        
-                    except Exception as e:
-                        if ("503" in str(e) or "404" in str(e)) and tentativa < tentativas - 1:
-                            time.sleep(2) # Espera 2 segundos antes de tentar novamente
-                            continue
-                        else:
-                            st.error(f"Erro no processamento: {e}")
-                            sucesso = True
-                            break
+            with st.spinner("A processar e auditar ocorrência com o motor OpenAI (gpt-4o-mini)..."):
+                try:
+                    # Chamada direta e estável utilizando o modelo gpt-4o-mini
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {"role": "system", "content": SYSTEM_INSTRUCTION_REDS},
+                            {"role": "user", "content": f"DADOS DA OCORRÊNCIA:\n{relato_bruto}"}
+                        ],
+                        temperature=0.1
+                    )
+                    
+                    resultado = response.choices[0].message.content
+                    st.markdown(resultado)
+                    
+                except Exception as e:
+                    st.error(f"Erro no processamento: {e}")
