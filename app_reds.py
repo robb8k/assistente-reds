@@ -126,11 +126,11 @@ with col1:
         ]
     )
     
-    st.subheader("Dados (Cena / Retorno)")
+    st.subheader("Dados:")
     
     # Sistema de Gravação de Áudio com legenda atualizada
     st.markdown("🎙️ **gravar:**")
-    audio_rec = st.audio_input("Fale para gravar o relato:")
+    audio_rec = st.audio_input("Audio/transcrever:")
     
     if audio_rec is not None:
         audio_bytes = audio_rec.getvalue()
@@ -175,7 +175,7 @@ with col1:
                         except:
                             pass
 
-    # Caixa de texto com título atualizado e placeholder em branco
+    # Caixa de texto com título Relato e placeholder em branco
     relato_bruto = st.text_area(
         "Relato:",
         value=st.session_state.relato_acumulado,
@@ -194,9 +194,9 @@ with col1:
 
     st.markdown("---")
     
-    # Sistema de Documentos (títulos apagados, mantendo apenas o componente funcional)
+    # Sistema de Documentos com label atualizada para Ficheiros:
     fich_carregados = st.file_uploader(
-        "Ficheiros de Evidência:", 
+        "Ficheiros:", 
         type=["jpg", "jpeg", "png", "webp", "pdf"],
         accept_multiple_files=True,
         key="upload_geral_completo"
