@@ -20,7 +20,7 @@ st.markdown("""
 # 📋 Easy REDS
 """)
 
-# Inicializa os estados de sessão para garantir persistência
+# Inicializa os estados de sessão para garantir persistência robusta
 if "relato_acumulado" not in st.session_state:
     st.session_state.relato_acumulado = ""
 
@@ -75,8 +75,56 @@ with col1:
     )
     
     st.subheader("Dados (Cena / Retorno)")
+    
+    # Novo Sistema de Gravação e Transcrição Direta para a Caixa de Escrita
+    st.markdown("🎙️ **Gravar Relato por Voz:**")
+    audio_rec = st.audio_input("Fale para gravar o relato:")
+    
+    if audio_rec is not None:
+        # Gera uma chave única baseada no tamanho do áudio para evitar duplicações e loops
+        audio_id = len(audio_rec.getvalue())
+        if st.session_state.get("ultimo_audio_id") != audio_id:
+            st.session_state.ultimo_audio_id = audio_id
+            
+            with st.spinner("A transcrever áudio para texto..."):
+                tmp_file_path = None
+                try:
+                    # Cria ficheiro temporário seguro para enviar ao Whisper
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f_tmp:
+                        f_tmp.write(audio_rec.getvalue())
+                        tmp_file_path = f_tmp.name
+                    
+                    with open(tmp_file_path, "rb") as audio_file:
+                        transcript = client.audio.transcriptions.create(
+                            model="whisper-1",
+                            file=audio_file,
+                            language="pt"
+                        )
+                    
+                    texto_falado = transcript.text
+                    
+                    if texto_falado and texto_falado.strip():
+                        # Transfere e acumula diretamente na caixa de escrita
+                        if st.session_state.relato_acumulado.strip():
+                            st.session_state.relato_acumulado += f" {texto_falado}"
+                        else:
+                            st.session_state.relato_acumulado = texto_transcrito if 'texto_transcrito' in locals() else texto_falado
+                        
+                        st.success("Áudio transcrito com sucesso para a caixa de escrita abaixo!")
+                        st.rerun()
+                    else:
+                        st.warning("⚠️ O áudio parece vazio. Tente falar novamente.")
+                        
+                except Exception as e:
+                    st.error(f"Erro na transcrição: {e}")
+                finally:
+                    if tmp_file_path and os.path.exists(tmp_file_path):
+                        try:
+                            os.unlink(tmp_file_path)
+                        except:
+                            pass
 
-    # Callback para manter o texto sincronizado no session_state em tempo real
+    # Caixa de escrita principal sincronizada
     def atualizar_relato():
         st.session_state.relato_acumulado = st.session_state.input_relato_texto
 
@@ -84,7 +132,7 @@ with col1:
         "Relato Bruto da Guarnição / Equipe:",
         value=st.session_state.relato_acumulado,
         height=220,
-        placeholder="Ex: Equipe empenhada em acidente de trânsito na via...",
+        placeholder="O texto transcrito da fala aparecerá aqui automaticamente ou pode digitar...",
         key="input_relato_texto",
         on_change=atualizar_relato
     )
@@ -95,11 +143,13 @@ with col1:
         st.session_state.relato_acumulado = ""
         st.session_state.lista_fotos = []
         st.session_state.ultimo_resultado = ""
+        if "ultimo_audio_id" in st.session_state:
+            del st.session_state.ultimo_audio_id
         st.rerun()
 
     st.markdown("---")
     
-    # Sistema de Documentos robusto e isolado
+    # Sistema de Documentos
     st.markdown("📎 **Documentos:**")
     fich_carregados = st.file_uploader(
         "Abrir arquivo:", 
@@ -125,7 +175,7 @@ with col1:
                 st.success("Evidência(s) adicionada(s) com sucesso!")
                 st.rerun()
             except Exception as e:
-                st.error(f"❌ Erro ao carregar ficheiro: {str(e)}")
+                st.error(f"Erro ao carregar ficheiro: {e}")
 
     # Exibição limpa em formato de lista expansível
     if st.session_state.lista_fotos:
@@ -136,7 +186,7 @@ with col1:
                 try:
                     st.image(item["bytes"], use_container_width=True)
                 except:
-                    st.info("Ficheiro carregado com sucesso.")
+                    st.info("Ficheiro carregado.")
                 
                 if st.button("❌ Remover", key=f"rem_{idx}"):
                     st.session_state.lista_fotos.pop(idx)
@@ -154,29 +204,29 @@ with col2:
     
     if processar:
         if not relato_bruto.strip() and not st.session_state.lista_fotos:
-            st.warning("⚠️ Validação: Insira um relato de texto ou adicione ao menos uma foto/documento para prosseguir.")
+            st.warning("⚠️ Validação: Insira um relato de texto/voz ou adicione ao menos uma foto/documento para prosseguir.")
         else:
             SYSTEM_INSTRUCTION_REDS = f"""
             Você é o Assistente Técnico Especialista em Registros Operacionais e Auditoria de Ocorrências do CBMMG.
             A natureza operacional selecionada para esta ocorrência é: {natureza_ocorrencia}.
 
-            DIRETRIZES TÉCNICAS И JURÍDICAS MANDATÓRIAS:
+            DIRETRIZES TÉCNICAS E JURÍDICAS MANDATÓRIAS:
             1. FIDELIDADE FACTUAL ESTATUÁRIA: O documento normativo diz o que deve ser feito; o histórico registra o que foi REALMENTE feito. Não presuma procedimentos, técnicas ou dados clínicos não informados.
             2. VEDAÇÃO A TERMOS GENÉRICOS: Nunca utilize expressões vagas como "procedimentos de praxe", "cuidados pertinentes" ou "conforme protocolo". Descreva a conduta real ou limite-se aos fatos citados.
             3. RELATO DE TERCEIRO VS. CONSTATAÇÃO DA EQUIPE: Toda dinâmica de acidente, perda de controle ou autoria não testemunhada diretamente pela guarnição/equipe DEVE ser atribuída formalmente ao declarante.
             4. CONCISÃO E ECONOMIA DE DADOS NO HISTÓRICO: Evite poluir o texto com números de placas, prefixos e matrículas que já possuem campos específicos no sistema.
             5. VEDAÇÃO A DIAGNÓSTICO MÉDICO: Descreva apenas achados e queixas anatômicas/visíveis, jamais ateste diagnósticos patológicos fechados.
-            6. LEITURA OBRIGATÓRIA DE DOCUMENTOS E IMAGENS: Analise com máxima atenção todas as imagens de documentos (RGs, CPFs, CNHs) ou fotos de cena enviadas. Extraia rigorosamente todos os dados textuais visíveis nelas (nomes completos, números de documentos, datas de nascimento, filiação, etc.) para preencher os campos do Bloco A com precisão absoluta.
+            6. LEITURA OBRIGATÓRIA DE DOCUMENTOS E IMAGENS: Analise com máxima atenção todas as imagens de documentos (RGs, CPFs, CNHs) ou fotos de cena enviadas. Extraia rigorosamente todos os dados textuais visíveis nelas para preencher os campos do Bloco A com precisão absoluta.
 
             FORMATO ESTRITO DE RESPOSTA (DIVIDIDO EM 3 BLOCOS):
-            ### BLOCO A: CAMPOS ESTRUTURADOS (Extraia com precisão cirúrgica todos os dados de nomes, CPFs, RGs, idades e veículos vindos do texto e de todas as imagens enviadas)
-            ### BLOCO B: HISTÓRICO NARRATIVO COMPLETO (Redigido com clareza técnica militar e impessoalidade)
-            ### BLOCO C: AUDITORIA TÉCNICA E PENDÊNCIAS (Apontando riscos de glosa, inconsistências e dados faltantes críticos)
+            ### BLOCO A: CAMPOS ESTRUTURADOS
+            ### BLOCO B: HISTÓRICO NARRATIVO COMPLETO
+            ### BLOCO C: AUDITORIA TÉCNICA E PENDÊNCIAS
             """
 
-            with st.spinner(f"A ler documentos, analisar evidências e gerar relatório ({natureza_ocorrencia})..."):
+            with st.spinner(f"A gerar relatório ({natureza_ocorrencia})..."):
                 try:
-                    conteudo_mensagem = [{"type": "text", "text": f"DADOS DA OCORRÊNCIA E RELATO:\n{relato_bruto}\n\nPor favor, analise rigorosamente todas as imagens/documentos anexados abaixo para extração de dados:"}]
+                    conteudo_mensagem = [{"type": "text", "text": f"DADOS DA OCORRÊNCIA E RELATO:\n{relato_bruto}\n\nPor favor, analise rigorosamente todas as imagens/documentos anexados abaixo:"}]
                     
                     for foto in st.session_state.lista_fotos:
                         encoded_img = base64.b64encode(foto["bytes"]).decode("utf-8")
@@ -201,9 +251,8 @@ with col2:
                     st.session_state.ultimo_resultado = resultado
                     
                 except Exception as e:
-                    st.error(f"❌ Erro detalhado na API da OpenAI (GPT-4o-mini): {str(e)}")
+                    st.error(f"Erro no processamento da IA: {e}")
 
-    # Exibe o resultado e as opções de partilha mantendo o estado na sessão
     if st.session_state.ultimo_resultado:
         st.markdown(st.session_state.ultimo_resultado)
         
@@ -238,6 +287,6 @@ with col2:
             corpo_mail = urllib.parse.quote(st.session_state.ultimo_resultado)
             url_email = f"mailto:?subject={assunto_mail}&body={corpo_mail}"
             st.markdown(
-                f'<a href="{url_email}" target="_blank"><button style="width:100%; background-color:#0078D4; color:white; border:none; padding:10px; border-radius:5px; font-weight:bold; cursor:pointer;">📧 E-mail</button></a>',
+                f'<a href="{url_email}" target="_blank"><button style="width:100%25; background-color:#0078D4; color:white; border:none; padding:10px; border-radius:5px; font-weight:bold; cursor:pointer;">📧 E-mail</button></a>',
                 unsafe_allow_html=True
             )
