@@ -16,6 +16,57 @@ st.set_page_config(
     layout="wide"
 )
 
+# Estilização CSS Moderna: Grafite Amarronzado (#231F1E) com Laranja Escurecido/Queimado (#D9531E)
+st.markdown("""
+<style>
+    /* Fundo geral da aplicação */
+    .stApp {
+        background-color: #1E1B1A;
+        color: #E6E1E0;
+    }
+    
+    /* Cabeçalhos e títulos */
+    h1, h2, h3 {
+        color: #F26419 !important;
+        font-family: 'Helvetica Neue', sans-serif;
+    }
+    
+    /* Caixas de texto e seletores */
+    .stTextInput input, .stTextArea textarea, .stSelectbox select {
+        background-color: #2D2827 !important;
+        color: #FFFFFF !important;
+        border: 1px solid #4A4240 !important;
+        border-radius: 8px !important;
+    }
+    
+    /* Botões principais de Ação */
+    .stButton button[kind="primary"], div.stButton > button {
+        background-color: #D9531E !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+        transition: background 0.3s ease;
+    }
+    
+    .stButton button:hover {
+        background-color: #B54213 !important;
+    }
+    
+    /* Expansores de documentos */
+    .streamlit-expanderHeader {
+        background-color: #2D2827 !important;
+        color: #E6E1E0 !important;
+        border-radius: 6px !important;
+    }
+    
+    /* Divisorias */
+    hr {
+        border-color: #4A4240 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.markdown("""
 # 📋 Easy REDS
 """)
@@ -79,7 +130,7 @@ with col1:
     
     st.subheader("Dados (Cena / Retorno)")
     
-    # Sistema de Gravação de Áudio Blindado
+    # Sistema de Gravação de Áudio
     st.markdown("🎙️ **Gravar Relato por Voz:**")
     audio_rec = st.audio_input("Fale para gravar o relato:")
     
@@ -87,7 +138,6 @@ with col1:
         audio_bytes = audio_rec.getvalue()
         audio_id = hash(audio_bytes)
         
-        # Garante que só processa uma única vez por gravação
         if st.session_state.processado_audio_id != audio_id:
             st.session_state.processado_audio_id = audio_id
             
@@ -108,7 +158,6 @@ with col1:
                     texto_falado = transcript.text
                     
                     if texto_falado and texto_falado.strip():
-                        # Adiciona o texto transcrito de forma segura ao acumulador
                         if st.session_state.relato_acumulado.strip():
                             st.session_state.relato_acumulado += f"\n{texto_falado}"
                         else:
@@ -128,7 +177,7 @@ with col1:
                         except:
                             pass
 
-    # Caixa de texto sem conflito de chaves, lendo diretamente do estado acumulado
+    # Caixa de texto
     relato_bruto = st.text_area(
         "Relato Bruto da Guarnição / Equipe:",
         value=st.session_state.relato_acumulado,
@@ -136,7 +185,6 @@ with col1:
         placeholder="O texto transcrito da fala aparecerá aqui ou pode digitar manualmente..."
     )
     
-    # Atualiza o estado caso o utilizador edite manualmente o texto na caixa
     st.session_state.relato_acumulado = relato_bruto
 
     if st.button("Limpar Relato Bruto"):
@@ -277,7 +325,7 @@ with col2:
             texto_wapp = urllib.parse.quote(f"*RELATÓRIO DE REDS - EASY REDS*\n\n{st.session_state.ultimo_resultado}")
             url_whatsapp = f"https://api.whatsapp.com/send?text={texto_wapp}"
             st.markdown(
-                f'<a href="{url_whatsapp}" target="_blank"><button style="width:100%; background-color:#25D366; color:white; border:none; padding:10px; border-radius:5px; font-weight:bold; cursor:pointer;">🟢 WhatsApp</button></a>',
+                f'<a href="{url_whatsapp}" target="_blank"><button style="width:100%; background-color:#D9531E; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">🟢 WhatsApp</button></a>',
                 unsafe_allow_html=True
             )
             
@@ -286,6 +334,6 @@ with col2:
             corpo_mail = urllib.parse.quote(st.session_state.ultimo_resultado)
             url_email = f"mailto:?subject={assunto_mail}&body={corpo_mail}"
             st.markdown(
-                f'<a href="{url_email}" target="_blank"><button style="width:100%; background-color:#0078D4; color:white; border:none; padding:10px; border-radius:5px; font-weight:bold; cursor:pointer;">📧 E-mail</button></a>',
+                f'<a href="{url_email}" target="_blank"><button style="width:100%; background-color:#2D2827; color:white; border:1px solid #4A4240; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">📧 E-mail</button></a>',
                 unsafe_allow_html=True
             )
