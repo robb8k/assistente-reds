@@ -1,8 +1,9 @@
 import streamlit as st
-from openai import OpenAI
+import google.generativeai as genai
+import time
 
-# Inicializa o cliente da OpenAI usando a chave segura guardada nos Secrets do Streamlit
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# Configura a chave da API do Gemini usando os Secrets do Streamlit
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
 st.set_page_config(
     page_title="Assistente de Confeção e Auditoria de Registros Operacionais",
@@ -53,20 +54,32 @@ with col2:
         if not relato_bruto.strip():
             st.warning("Por favor, insira o relato bruto da ocorrência para prosseguir.")
         else:
-            with st.spinner("A processar e auditar ocorrência com o motor OpenAI (gpt-4o-mini)..."):
-                try:
-                    # Chamada utilizando o modelo gpt-4o-mini da OpenAI
-                    response = client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=[
-                            {"role": "system", "content": SYSTEM_INSTRUCTION_REDS},
-                            {"role": "user", "content": f"DADOS DA OCORRÊNCIA:\n{relato_bruto}"}
-                        ],
-                        temperature=0.1
-                    )
-                    
-                    resultado = response.choices[0].message.content
-                    st.markdown(resultado)
-                    
-                except Exception as e:
-                    st.error(f"Erro no processamento: {e}")
+            with st.spinner("A processar e auditar ocorrência com o motor Gemini..."):
+                sucesso = False
+                tentativas = 3
+                
+                # Sistema de tentativas automáticas para contornar o erro 503 de alta demanda
+                for tentativa in range(tentativas):
+                    try:
+                        # Utiliza o modelo flash padrão do Gemini
+                        model = genai.GenerativeModel(
+                            model_name="gemini-1.5-flash",
+                            system_instruction=SYSTEM_INSTRUCTION_REDS
+                        )
+                        
+                        response = model.generate_content(
+                            f"DADOS DA OCORRÊNCIA:\n{relato_bruto}"
+                        )
+                        
+                        st.markdown(response.text)
+                        sucesso = True
+                        break
+                        
+                    except Exception as e:
+                        if "503" in str(e) and tentativa < tentativas - 1:
+                            time.sleep(2) # Espera 2 segundos antes de tentar novamente
+                            continue
+                        else:
+                            st.error(f"Erro no processamento: {e}")
+                            sucesso = True
+                            break
