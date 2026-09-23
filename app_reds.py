@@ -115,7 +115,7 @@ def gerar_pdf(conteudo_texto):
 col1, col2 = st.columns(2)
 
 with col1:
-    # Seletor de Natureza restrito e ordenado conforme solicitado
+    # Seletor de Natureza
     natureza_ocorrencia = st.selectbox(
         "Natureza:",
         [
@@ -128,8 +128,8 @@ with col1:
     
     st.subheader("Dados (Cena / Retorno)")
     
-    # Sistema de Gravação de Áudio
-    st.markdown("🎙️ **Gravar Relato por Voz:**")
+    # Sistema de Gravação de Áudio com legenda atualizada
+    st.markdown("🎙️ **gravar:**")
     audio_rec = st.audio_input("Fale para gravar o relato:")
     
     if audio_rec is not None:
@@ -175,12 +175,12 @@ with col1:
                         except:
                             pass
 
-    # Caixa de texto
+    # Caixa de texto com título atualizado e placeholder em branco
     relato_bruto = st.text_area(
-        "Relato Bruto da Guarnição / Equipe:",
+        "Relato:",
         value=st.session_state.relato_acumulado,
         height=220,
-        placeholder="O texto transcrito da fala aparecerá aqui ou pode digitar manualmente..."
+        placeholder=""
     )
     
     st.session_state.relato_acumulado = relato_bruto
@@ -194,10 +194,9 @@ with col1:
 
     st.markdown("---")
     
-    # Sistema de Documentos
-    st.markdown("📎 **Documentos:**")
+    # Sistema de Documentos (títulos apagados, mantendo apenas o componente funcional)
     fich_carregados = st.file_uploader(
-        "Abrir arquivo:", 
+        "Ficheiros de Evidência:", 
         type=["jpg", "jpeg", "png", "webp", "pdf"],
         accept_multiple_files=True,
         key="upload_geral_completo"
