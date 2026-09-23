@@ -30,6 +30,9 @@ if "lista_fotos" not in st.session_state:
 if "ultimo_resultado" not in st.session_state:
     st.session_state.ultimo_resultado = ""
 
+if "processado_audio_id" not in st.session_state:
+    st.session_state.processado_audio_id = None
+
 # Função para gerar PDF formatado
 def gerar_pdf(conteudo_texto):
     temp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
@@ -76,75 +79,71 @@ with col1:
     
     st.subheader("Dados (Cena / Retorno)")
     
-    # Novo Sistema de Gravação e Transcrição Direta para a Caixa de Escrita
+    # Sistema de Gravação de Áudio Blindado
     st.markdown("🎙️ **Gravar Relato por Voz:**")
     audio_rec = st.audio_input("Fale para gravar o relato:")
     
     if audio_rec is not None:
-        # Gera uma chave única baseada no tamanho do áudio para evitar duplicações e loops
-        audio_id = len(audio_rec.getvalue())
-        if st.session_state.get("ultimo_audio_id") != audio_id:
-            st.session_state.ultimo_audio_id = audio_id
+        audio_bytes = audio_rec.getvalue()
+        audio_id = hash(audio_bytes)
+        
+        # Garante que só processa uma única vez por gravação
+        if st.session_state.processado_audio_id != audio_id:
+            st.session_state.processado_audio_id = audio_id
             
             with st.spinner("A transcrever áudio para texto..."):
-                tmp_file_path = None
+                tmp_path = None
                 try:
-                    # Cria ficheiro temporário seguro para enviar ao Whisper
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f_tmp:
-                        f_tmp.write(audio_rec.getvalue())
-                        tmp_file_path = f_tmp.name
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                        tmp.write(audio_bytes)
+                        tmp_path = tmp.name
                     
-                    with open(tmp_file_path, "rb") as audio_file:
+                    with open(tmp_path, "rb") as f:
                         transcript = client.audio.transcriptions.create(
                             model="whisper-1",
-                            file=audio_file,
+                            file=f,
                             language="pt"
                         )
                     
                     texto_falado = transcript.text
                     
                     if texto_falado and texto_falado.strip():
-                        # Transfere e acumula diretamente na caixa de escrita
+                        # Adiciona o texto transcrito de forma segura ao acumulador
                         if st.session_state.relato_acumulado.strip():
-                            st.session_state.relato_acumulado += f" {texto_falado}"
+                            st.session_state.relato_acumulado += f"\n{texto_falado}"
                         else:
-                            st.session_state.relato_acumulado = texto_transcrito if 'texto_transcrito' in locals() else texto_falado
-                        
-                        st.success("Áudio transcrito com sucesso para a caixa de escrita abaixo!")
+                            st.session_state.relato_acumulado = texto_falado
+                            
+                        st.success("Áudio transcrito e transferido para a caixa abaixo com sucesso!")
                         st.rerun()
                     else:
-                        st.warning("⚠️ O áudio parece vazio. Tente falar novamente.")
+                        st.warning("⚠️ O áudio gravado parece vazio.")
                         
                 except Exception as e:
                     st.error(f"Erro na transcrição: {e}")
                 finally:
-                    if tmp_file_path and os.path.exists(tmp_file_path):
+                    if tmp_path and os.path.exists(tmp_path):
                         try:
-                            os.unlink(tmp_file_path)
+                            os.unlink(tmp_path)
                         except:
                             pass
 
-    # Caixa de escrita principal sincronizada
-    def atualizar_relato():
-        st.session_state.relato_acumulado = st.session_state.input_relato_texto
-
+    # Caixa de texto sem conflito de chaves, lendo diretamente do estado acumulado
     relato_bruto = st.text_area(
         "Relato Bruto da Guarnição / Equipe:",
         value=st.session_state.relato_acumulado,
         height=220,
-        placeholder="O texto transcrito da fala aparecerá aqui automaticamente ou pode digitar...",
-        key="input_relato_texto",
-        on_change=atualizar_relato
+        placeholder="O texto transcrito da fala aparecerá aqui ou pode digitar manualmente..."
     )
     
+    # Atualiza o estado caso o utilizador edite manualmente o texto na caixa
     st.session_state.relato_acumulado = relato_bruto
 
     if st.button("Limpar Relato Bruto"):
         st.session_state.relato_acumulado = ""
         st.session_state.lista_fotos = []
         st.session_state.ultimo_resultado = ""
-        if "ultimo_audio_id" in st.session_state:
-            del st.session_state.ultimo_audio_id
+        st.session_state.processado_audio_id = None
         st.rerun()
 
     st.markdown("---")
@@ -177,7 +176,7 @@ with col1:
             except Exception as e:
                 st.error(f"Erro ao carregar ficheiro: {e}")
 
-    # Exibição limpa em formato de lista expansível
+    # Exibição em formato de lista expansível
     if st.session_state.lista_fotos:
         st.markdown(f"**Evidências prontas para envio ({len(st.session_state.lista_fotos)}):**")
         
@@ -287,6 +286,6 @@ with col2:
             corpo_mail = urllib.parse.quote(st.session_state.ultimo_resultado)
             url_email = f"mailto:?subject={assunto_mail}&body={corpo_mail}"
             st.markdown(
-                f'<a href="{url_email}" target="_blank"><button style="width:100%25; background-color:#0078D4; color:white; border:none; padding:10px; border-radius:5px; font-weight:bold; cursor:pointer;">📧 E-mail</button></a>',
+                f'<a href="{url_email}" target="_blank"><button style="width:100%; background-color:#0078D4; color:white; border:none; padding:10px; border-radius:5px; font-weight:bold; cursor:pointer;">📧 E-mail</button></a>',
                 unsafe_allow_html=True
             )
