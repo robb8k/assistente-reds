@@ -20,12 +20,15 @@ st.markdown("""
 # 📋 Easy REDS
 """)
 
-# Inicializa os estados de sessão para acumular texto e fotos
+# Inicializa os estados de sessão para garantir persistência e segurança contra fecho acidental
 if "relato_acumulado" not in st.session_state:
     st.session_state.relato_acumulado = ""
 
 if "lista_fotos" not in st.session_state:
     st.session_state.lista_fotos = []
+
+if "ultimo_resultado" not in st.session_state:
+    st.session_state.ultimo_resultado = ""
 
 # Função para gerar PDF formatado
 def gerar_pdf(conteudo_texto):
@@ -114,13 +117,17 @@ with col1:
     
     st.session_state.relato_acumulado = relato_bruto
     
+    # Alerta preventivo de pré-auditoria (aviso subtil se o relato estiver muito curto)
+    if relato_bruto.strip() and len(relato_bruto.strip()) < 20:
+        st.warning("⚠️ **Aviso de Pré-Auditoria:** O relato está muito curto. Detalhe mais os factos, vítimas ou dados da cena para um histórico mais rico.")
+
     if st.button("Limpar Relato Bruto"):
         st.session_state.relato_acumulado = ""
         st.rerun()
 
     st.markdown("---")
     
-    # Sistema de upload ajustado sem restrição restrita de imagem para forçar o Android a abrir o gestor completo (Galeria, Drive, Ficheiros)
+    # Sistema de upload unificado
     st.markdown("📎 **Evidências e Documentos:**")
     fich_carregados = st.file_uploader(
         "Toque para abrir o gestor (Galeria, Google Drive, Ficheiros):", 
@@ -215,12 +222,24 @@ with col2:
                 except Exception as e:
                     st.error(f"Erro no processamento da IA: {e}")
 
-    # Exibe o resultado se ele existir na sessão
-    if "ultimo_resultado" in st.session_state and st.session_state.ultimo_resultado:
+    # Exibe o resultado se ele existir na sessão (garantindo que não se perde ao interagir com outros botões)
+    if st.session_state.ultimo_resultado:
         st.markdown(st.session_state.ultimo_resultado)
         
         st.markdown("---")
-        st.subheader("📤 Exportação e Partilha:")
+        st.subheader("📤 Exportação, Cópia e Partilha:")
+        
+        # Botão de Copiar Texto para a Área de Transferência com 1 Clique (usando component HTML/JS)
+        texto_para_copiar = st.session_state.ultimo_resultado.replace('`', '').replace('"', "'")
+        copiar_html = f"""
+        <div style="margin-bottom: 10px;">
+            <button onclick="navigator.clipboard.writeText(`{texto_para_copiar}`); alert('Minuta copiada com sucesso para a área de transferência!');" 
+                    style="width:100%; background-color:#FF4B4B; color:white; border:none; padding:10px; border-radius:5px; font-weight:bold; cursor:pointer;">
+                📋 Copiar Minuta Inteira (1 Clique)
+            </button>
+        </div>
+        """
+        st.markdown(copiar_html, unsafe_allow_html=True)
         
         pdf_path = gerar_pdf(st.session_state.ultimo_resultado)
         with open(pdf_path, "rb") as f:
