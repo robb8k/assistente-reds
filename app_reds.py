@@ -114,16 +114,28 @@ with col1:
         st.session_state.relato_acumulado = ""
         st.rerun()
 
-    uploaded_file = st.file_uploader("Evidências Visuais e Documentos (RG, CPF, CNH, Fotos da Cena):", type=["jpg", "png", "jpeg"])
+    # Abas para alternar entre Upload de ficheiro ou uso da Câmara do telemóvel/computador
+    st.markdown("📸 **Evidências Visuais e Documentos:**")
+    tipo_entrada_midia = st.radio("Escolha o método de captura da imagem:", ["Carregar Ficheiro", "Tirar Foto com a Câmara"], horizontal=True)
     
+    imagem_selecionada = None
+    if tipo_entrada_midia == "Carregar Ficheiro":
+        uploaded_file = st.file_uploader("Selecione a imagem (RG, CPF, CNH ou Cena):", type=["jpg", "png", "jpeg"])
+        if uploaded_file is not None:
+            imagem_selecionada = uploaded_file
+    else:
+        camera_file = st.camera_input("Tire uma foto com a câmara:")
+        if camera_file is not None:
+            imagem_selecionada = camera_file
+
     processar = st.button("Processar, Ler Documentos e Auditar Ocorrência", type="primary", use_container_width=True)
 
 with col2:
     st.subheader("Minuta:")
     
     if processar:
-        if not relato_bruto.strip() and not uploaded_file:
-            st.warning("⚠️ Validação Pré-auditoria: Insira um relato de texto/voz ou envie uma imagem/documento para prosseguir.")
+        if not relato_bruto.strip() and not imagem_selecionada:
+            st.warning("⚠️ Validação Pré-auditoria: Insira um relato de texto/voz ou adicione uma imagem/foto para prosseguir.")
         else:
             SYSTEM_INSTRUCTION_REDS = f"""
             Você é o Assistente Técnico Especialista em Registros Operacionais e Auditoria de Ocorrências do CBMMG.
@@ -143,14 +155,14 @@ with col2:
             ### BLOCO C: AUDITORIA TÉCNICA E PENDÊNCIAS (Apontando riscos de glosa, inconsistências e dados faltantes críticos)
             """
 
-            with st.spinner(f"A analisar documentos e auditar ocorrência ({natureza_ocorrencia})..."):
+            with st.spinner(f"A analisar dados e auditar ocorrência ({natureza_ocorrencia})..."):
                 try:
                     conteudo_mensagem = [{"type": "text", "text": f"DADOS DA OCORRÊNCIA E RELATO:\n{relato_bruto}"}]
                     
-                    if uploaded_file is not None:
-                        image_bytes = uploaded_file.read()
+                    if imagem_selecionada is not None:
+                        image_bytes = imagem_selecionada.read()
                         encoded_image = base64.b64encode(image_bytes).decode("utf-8")
-                        mime_type = uploaded_file.type if uploaded_file.type else "image/jpeg"
+                        mime_type = imagem_selecionada.type if imagem_selecionada.type else "image/jpeg"
                         
                         conteudo_mensagem.append({
                             "type": "image_url",
