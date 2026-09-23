@@ -116,10 +116,6 @@ with col1:
     )
     
     st.session_state.relato_acumulado = relato_bruto
-    
-    # Validação Ativa de Pré-Auditoria
-    if relato_bruto.strip() and len(relato_bruto.strip()) < 30:
-        st.warning("⚠️ **Aviso de Pré-Auditoria:** O relato está breve. Certifique-se de incluir dados como local, nomes ou dinâmica para evitar pendências na minuta.")
 
     if st.button("Limpar Relato Bruto"):
         st.session_state.relato_acumulado = ""
@@ -127,10 +123,11 @@ with col1:
 
     st.markdown("---")
     
-    # Sistema de upload unificado
+    # Sistema de upload de evidências
     st.markdown("📎 **Evidências e Documentos:**")
     fich_carregados = st.file_uploader(
         "Toque para abrir o gestor (Galeria, Google Drive, Ficheiros):", 
+        type=["jpg", "jpeg", "png", "webp"],
         accept_multiple_files=True,
         key="upload_geral_completo"
     )
@@ -167,7 +164,6 @@ with col1:
             st.rerun()
 
     st.markdown("---")
-    # Botão principal renomeado para "Gerar Relatório"
     processar = st.button("Gerar Relatório", type="primary", use_container_width=True)
 
 with col2:
@@ -175,7 +171,7 @@ with col2:
     
     if processar:
         if not relato_bruto.strip() and not st.session_state.lista_fotos:
-            st.warning("⚠️ Validação Pré-auditoria: Insira um relato de texto/voz ou adicione ao menos uma foto/documento para prosseguir.")
+            st.warning("⚠️ Validação: Insira um relato de texto/voz ou adicione ao menos uma foto/documento para prosseguir.")
         else:
             SYSTEM_INSTRUCTION_REDS = f"""
             Você é o Assistente Técnico Especialista em Registros Operacionais e Auditoria de Ocorrências do CBMMG.
@@ -187,24 +183,26 @@ with col2:
             3. RELATO DE TERCEIRO VS. CONSTATAÇÃO DA EQUIPE: Toda dinâmica de acidente, perda de controle ou autoria não testemunhada diretamente pela guarnição/equipe DEVE ser atribuída formalmente ao declarante.
             4. CONCISÃO E ECONOMIA DE DADOS NO HISTÓRICO: Evite poluir o texto com números de placas, prefixos e matrículas que já possuem campos específicos no sistema.
             5. VEDAÇÃO A DIAGNÓSTICO MÉDICO: Descreva apenas achados e queixas anatômicas/visíveis, jamais ateste diagnósticos patológicos fechados.
-            6. LEITURA DE DOCUMENTOS E IMAGENS MÚLTIPLAS: Se forem enviadas várias imagens de documentos (RGs, CPFs, CNHs de diferentes envolvidos) ou cenas, extraia rigorosamente todos os dados textuais visíveis em cada uma delas para compor os campos estruturados de forma detalhada.
+            6. LEITURA OBRIGATÓRIA DE DOCUMENTOS E IMAGENS: Analise com máxima atenção todas as imagens de documentos (RGs, CPFs, CNHs) ou fotos de cena enviadas. Extraia rigorosamente todos os dados textuais visíveis nelas (nomes completos, números de documentos, datas de nascimento, filiação, etc.) para preencher os campos do Bloco A com precisão absoluta.
 
             FORMATO ESTRITO DE RESPOSTA (DIVIDIDO EM 3 BLOCOS):
-            ### BLOCO A: CAMPOS ESTRUTURADOS (Extraia com precisão cirúrgica os dados de nomes, CPFs, RGs, idades e veículos vindos do texto e de todas as imagens enviadas)
+            ### BLOCO A: CAMPOS ESTRUTURADOS (Extraia com precisão cirúrgica todos os dados de nomes, CPFs, RGs, idades, CPFs e veículos vindos do texto e de todas as imagens enviadas)
             ### BLOCO B: HISTÓRICO NARRATIVO COMPLETO (Redigido com clareza técnica militar e impessoalidade)
             ### BLOCO C: AUDITORIA TÉCNICA E PENDÊNCIAS (Apontando riscos de glosa, inconsistências e dados faltantes críticos)
             """
 
-            with st.spinner(f"A gerar relatório e auditar ocorrência ({natureza_ocorrencia})..."):
+            with st.spinner(f"A ler documentos, analisar evidências e gerar relatório ({natureza_ocorrencia})..."):
                 try:
-                    conteudo_mensagem = [{"type": "text", "text": f"DADOS DA OCORRÊNCIA E RELATO:\n{relato_bruto}"}]
+                    # Montagem robusta da mensagem multimodal suportada pelo gpt-4o-mini
+                    conteudo_mensagem = [{"type": "text", "text": f"DADOS DA OCORRÊNCIA E RELATO:\n{relato_bruto}\n\nPor favor, analise rigorosamente todas as imagens/documentos anexados abaixo para extração de dados:"}]
                     
                     for foto in st.session_state.lista_fotos:
                         encoded_img = base64.b64encode(foto["bytes"]).decode("utf-8")
+                        mime = foto["type"] if foto["type"] else "image/jpeg"
                         conteudo_mensagem.append({
                             "type": "image_url",
                             "image_url": {
-                                "url": f"data:{foto['type']};base64,{encoded_img}"
+                                "url": f"data:{mime};base64,{encoded_img}"
                             }
                         })
                     
@@ -223,19 +221,12 @@ with col2:
                 except Exception as e:
                     st.error(f"Erro no processamento da IA: {e}")
 
-    # Exibe o resultado e a caixa de texto de cópia facilitada
+    # Exibe o resultado e as opções de partilha
     if st.session_state.ultimo_resultado:
         st.markdown(st.session_state.ultimo_resultado)
         
         st.markdown("---")
-        st.subheader("📤 Ações Rápidas (Cópia e Partilha):")
-        
-        # Caixa de texto dedicada para cópia infalível (basta tocar e selecionar tudo ou usar o ícone nativo do Streamlit)
-        st.text_area(
-            "📋 Copiar Minuta (Toque no canto superior direito do campo para copiar):",
-            value=st.session_state.ultimo_resultado,
-            height=150
-        )
+        st.subheader("📤 Exportação e Partilha:")
         
         pdf_path = gerar_pdf(st.session_state.ultimo_resultado)
         with open(pdf_path, "rb") as f:
