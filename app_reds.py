@@ -20,7 +20,7 @@ st.markdown("""
 # 📋 Easy REDS
 """)
 
-# Inicializa os estados de sessão para garantir persistência robusta
+# Inicializa os estados de sessão para garantir persistência
 if "relato_acumulado" not in st.session_state:
     st.session_state.relato_acumulado = ""
 
@@ -29,9 +29,6 @@ if "lista_fotos" not in st.session_state:
 
 if "ultimo_resultado" not in st.session_state:
     st.session_state.ultimo_resultado = ""
-
-if "processed_audio_hash" not in st.session_state:
-    st.session_state.processed_audio_hash = None
 
 # Função para gerar PDF formatado
 def gerar_pdf(conteudo_texto):
@@ -64,7 +61,7 @@ def gerar_pdf(conteudo_texto):
 col1, col2 = st.columns(2)
 
 with col1:
-    # Seletor de Natureza
+    # Seletor de Natureza atualizado
     natureza_ocorrencia = st.selectbox(
         "Selecione a Natureza:",
         [
@@ -79,53 +76,38 @@ with col1:
     
     st.subheader("Dados (Cena / Retorno)")
     
-    # Sistema de Gravação de Áudio Blindado contra Loops
+    # Sistema de Gravação de Áudio Original e Funcional
     st.markdown("🎙️")
-    audio_file_input = st.audio_input("Grave o relato da ocorrência falando ao microfone:")
+    audio_bytes = st.audio_input("Grave o relato da ocorrência falando ao microfone:")
     
-    if audio_file_input is not None:
-        audio_bytes = audio_file_input.getvalue()
-        audio_hash = hash(audio_bytes)
-        
-        # Só processa se for um áudio absolutamente novo (evita o loop infinito)
-        if st.session_state.processed_audio_hash != audio_hash:
-            st.session_state.processed_audio_hash = audio_hash
-            
-            with st.spinner("A transcrever áudio com o Whisper..."):
-                audio_path = None
+    if audio_bytes is not None:
+        audio_hash = hash(audio_bytes.getvalue())
+        if "ultimo_audio" not in st.session_state or st.session_state.ultimo_audio != audio_hash:
+            st.session_state.ultimo_audio = audio_hash
+            with st.spinner("A transcrever áudio do microfone..."):
                 try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_audio:
-                        tmp_audio.write(audio_bytes)
-                        audio_path = tmp_audio.name
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                        tmp.write(audio_bytes.read())
+                        tmp_path = tmp.name
                     
-                    with open(audio_path, "rb") as f:
+                    with open(tmp_path, "rb") as f:
                         transcript = client.audio.transcriptions.create(
                             model="whisper-1",
                             file=f,
                             language="pt"
                         )
+                    novo_texto = transcript.text
                     
-                    texto_transcrito = transcript.text
-                    
-                    if texto_transcrito and texto_transcrito.strip():
-                        if st.session_state.relato_acumulado.strip():
-                            st.session_state.relato_acumulado += f"\n{texto_transcrito}"
-                        else:
-                            st.session_state.relato_acumulado = texto_transcrito
-                        
-                        st.success("Áudio transcrito com sucesso!")
-                        st.rerun()
+                    if st.session_state.relato_acumulado.strip():
+                        st.session_state.relato_acumulado += f"\n{novo_texto}"
                     else:
-                        st.warning("⚠️ O áudio gravado parece estar vazio.")
+                        st.session_state.relato_acumulado = novo_texto
                         
+                    st.success("Áudio transcrito e adicionado ao relato com sucesso!")
+                    os.unlink(tmp_path)
+                    st.rerun()
                 except Exception as e:
-                    st.error(f"Erro na transcrição: {e}")
-                finally:
-                    if audio_path and os.path.exists(audio_path):
-                        try:
-                            os.unlink(audio_path)
-                        except:
-                            pass
+                    st.error(f"Erro na transcrição por microfone: {e}")
 
     # Callback para manter o texto sincronizado no session_state em tempo real
     def atualizar_relato():
@@ -146,12 +128,13 @@ with col1:
         st.session_state.relato_acumulado = ""
         st.session_state.lista_fotos = []
         st.session_state.ultimo_resultado = ""
-        st.session_state.processed_audio_hash = None
+        if "ultimo_audio" in st.session_state:
+            del st.session_state.ultimo_audio
         st.rerun()
 
     st.markdown("---")
     
-    # Documentos
+    # Textos solicitados aplicados
     st.markdown("📎 **Documentos:**")
     fich_carregados = st.file_uploader(
         "Abrir arquivo:", 
@@ -195,6 +178,7 @@ with col1:
     processar = st.button("Gerar Relatório", type="primary", use_container_width=True)
 
 with col2:
+    # Título correto
     st.subheader("Relatório:")
     
     if processar:
