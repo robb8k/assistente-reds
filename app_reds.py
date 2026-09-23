@@ -30,7 +30,7 @@ DIRETRIZES TÉCNICAS E JURÍDICAS MANDATÓRIAS:
 FORMATO ESTRITO DE RESPOSTA (DIVIDIDO EM 3 BLOCOS):
 ### BLOCO A: CAMPOS ESTRUTURADOS
 ### BLOCO B: HISTÓRICO NARRATIVO COMPLETO
-### BLOCO C: AUDITORIA TÉCNICA E PENDÊNCIAS
+### BLOCO C: AUDITORIA TÉCNICA И PENDÊNCIAS
 """
 
 col1, col2 = st.columns(2)
@@ -61,9 +61,9 @@ with col2:
                 # Sistema de tentativas automáticas para contornar oscilações de rede ou alta demanda
                 for tentativa in range(tentativas):
                     try:
-                        # Utiliza o modelo flash padrão e estável do Gemini
+                        # Utiliza o modelo atualizado e nativo do Gemini
                         model = genai.GenerativeModel(
-                            model_name="gemini-1.5-flash",
+                            model_name="gemini-2.0-flash",
                             system_instruction=SYSTEM_INSTRUCTION_REDS
                         )
                         
