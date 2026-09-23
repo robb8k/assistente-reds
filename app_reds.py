@@ -120,13 +120,13 @@ with col1:
 
     st.markdown("---")
     
-    # Sistema de upload abrindo o explorador/provedores nativos do telemóvel (Galeria, Drive, Ficheiros, Câmara)
+    # Sistema de upload configurado para abrir o seletor avançado e amplo do telemóvel
     st.markdown("📎 **Evidências e Documentos:**")
     fich_carregados = st.file_uploader(
-        "Selecione da Galeria, Google Drive ou Câmara:", 
-        type=["jpg", "png", "jpeg"], 
+        "Toque para escolher da Galeria, Google Drive ou Câmara:", 
+        type=["jpg", "jpeg", "png", "pdf", "webp"], 
         accept_multiple_files=True,
-        key="upload_unificado"
+        key="upload_avancado"
     )
     
     if fich_carregados:
@@ -211,8 +211,6 @@ with col2:
                     )
                     
                     resultado = response.choices[0].message.content
-                    
-                    # Guarda o resultado no session_state para manter visível e permitir partilha
                     st.session_state.ultimo_resultado = resultado
                     
                 except Exception as e:
@@ -225,7 +223,6 @@ with col2:
         st.markdown("---")
         st.subheader("📤 Exportação e Partilha:")
         
-        # Gera o PDF para download
         pdf_path = gerar_pdf(st.session_state.ultimo_resultado)
         with open(pdf_path, "rb") as f:
             pdf_bytes = f.read()
@@ -242,7 +239,6 @@ with col2:
             )
             
         with col_wapp:
-            # Prepara link codificado para o WhatsApp
             texto_wapp = urllib.parse.quote(f"*MINUTA DE REDS - EASY REDS*\n\n{st.session_state.ultimo_resultado}")
             url_whatsapp = f"https://api.whatsapp.com/send?text={texto_wapp}"
             st.markdown(
@@ -251,7 +247,6 @@ with col2:
             )
             
         with col_mail:
-            # Prepara link codificado para E-mail
             assunto_mail = urllib.parse.quote("Minuta de Ocorrência - Easy REDS")
             corpo_mail = urllib.parse.quote(st.session_state.ultimo_resultado)
             url_email = f"mailto:?subject={assunto_mail}&body={corpo_mail}"
