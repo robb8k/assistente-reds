@@ -117,10 +117,9 @@ with col1:
     
     st.session_state.relato_acumulado = relato_bruto
     
-    # Validação Ativa de Pré-Auditoria (Exibe alerta imediato se faltarem dados essenciais)
-    if relato_bruto.strip():
-        if len(relato_bruto.strip()) < 30:
-            st.warning("⚠️ **Aviso de Pré-Auditoria:** O relato está breve. Certifique-se de incluir dados como local, nomes ou dinâmica para evitar pendências na minuta.")
+    # Validação Ativa de Pré-Auditoria
+    if relato_bruto.strip() and len(relato_bruto.strip()) < 30:
+        st.warning("⚠️ **Aviso de Pré-Auditoria:** O relato está breve. Certifique-se de incluir dados como local, nomes ou dinâmica para evitar pendências na minuta.")
 
     if st.button("Limpar Relato Bruto"):
         st.session_state.relato_acumulado = ""
@@ -168,7 +167,8 @@ with col1:
             st.rerun()
 
     st.markdown("---")
-    processar = st.button("Processar, Ler Documentos e Auditar Ocorrência", type="primary", use_container_width=True)
+    # Botão principal renomeado para "Gerar Relatório"
+    processar = st.button("Gerar Relatório", type="primary", use_container_width=True)
 
 with col2:
     st.subheader("Minuta:")
@@ -195,7 +195,7 @@ with col2:
             ### BLOCO C: AUDITORIA TÉCNICA E PENDÊNCIAS (Apontando riscos de glosa, inconsistências e dados faltantes críticos)
             """
 
-            with st.spinner(f"A analisar todas as evidências e auditar ocorrência ({natureza_ocorrencia})..."):
+            with st.spinner(f"A gerar relatório e auditar ocorrência ({natureza_ocorrencia})..."):
                 try:
                     conteudo_mensagem = [{"type": "text", "text": f"DADOS DA OCORRÊNCIA E RELATO:\n{relato_bruto}"}]
                     
@@ -223,30 +223,19 @@ with col2:
                 except Exception as e:
                     st.error(f"Erro no processamento da IA: {e}")
 
-    # Exibe o resultado unificado e os botões de ação logo abaixo
+    # Exibe o resultado e a caixa de texto de cópia facilitada
     if st.session_state.ultimo_resultado:
         st.markdown(st.session_state.ultimo_resultado)
         
         st.markdown("---")
         st.subheader("📤 Ações Rápidas (Cópia e Partilha):")
         
-        # Botão de Cópia corrigido com codificação limpa em Base64 para evitar bloqueio de aspas e quebras de linha no navegador
-        texto_bytes_base64 = base64.b64encode(st.session_state.ultimo_resultado.encode('utf-8')).decode('utf-8')
-        copiar_html = f"""
-        <div style="margin-bottom: 10px;">
-            <button onclick="
-                const text = decodeURIComponent(escape(atob('{texto_bytes_base64}')));
-                navigator.clipboard.writeText(text).then(() => {{
-                    alert('Minuta copiada com sucesso para a área de transferência!');
-                }}).catch(err => {{
-                    alert('Erro ao copiar: ' + err);
-                }});
-            " style="width:100%; background-color:#FF4B4B; color:white; border:none; padding:10px; border-radius:5px; font-weight:bold; cursor:pointer;">
-                📋 Copiar Minuta Inteira (1 Clique)
-            </button>
-        </div>
-        """
-        st.markdown(copiar_html, unsafe_allow_html=True)
+        # Caixa de texto dedicada para cópia infalível (basta tocar e selecionar tudo ou usar o ícone nativo do Streamlit)
+        st.text_area(
+            "📋 Copiar Minuta (Toque no canto superior direito do campo para copiar):",
+            value=st.session_state.ultimo_resultado,
+            height=150
+        )
         
         pdf_path = gerar_pdf(st.session_state.ultimo_resultado)
         with open(pdf_path, "rb") as f:
