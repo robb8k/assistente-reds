@@ -115,16 +115,14 @@ def gerar_pdf(conteudo_texto):
 col1, col2 = st.columns(2)
 
 with col1:
-    # Seletor de Natureza atualizado conforme solicitado
+    # Seletor de Natureza restrito e ordenado conforme solicitado
     natureza_ocorrencia = st.selectbox(
         "Natureza:",
         [
-            "Acidente de Trânsito com Vítima.",
-            "Incêndio em Edificação / Vegetação / Veículo",
-            "Salvamento (Altura, Aquático, Terrestre)",
-            "Busca e Salvamento de Desaparecidos",
-            "Atendimento Pré-Hospitalar (Clínico/Trauma Geral)",
-            "Outras Ocorrências / Defesa Civil"
+            "Resgate (APH/ Clinico/Trauma)",
+            "Salvamento (Altura/ Aquático,/Terrestre)",
+            "Socorro (Incêndio/ Edificação / Vegetação / Veículo)",
+            "Outras Ocorrências (ADM/ Defesa Civil/Vistorias)"
         ]
     )
     
