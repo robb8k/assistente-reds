@@ -119,59 +119,47 @@ with col1:
 
     st.markdown("---")
     
-    # Menu Estilo WhatsApp (Botão de Anexo com o símbolo de Grampo 📎)
-    st.markdown("📎 **Anexar Evidências e Documentos:**")
-    
-    opcao_anexo = st.selectbox(
-        "Escolha a ação de anexo:",
-        ["Selecione...", "📁 Fotos e Vídeos (Galeria)", "📷 Tirar Foto com a Câmara"],
-        key="menu_anexo"
+    # Sistema de upload unificado e robusto (compatível com PC e câmara/galeria do telemóvel)
+    st.markdown("📎 **Evidências e Documentos:**")
+    fich_carregados = st.file_uploader(
+        "Carregar documentos, fotos da cena ou tirar foto (via telemóvel):", 
+        type=["jpg", "png", "jpeg"], 
+        accept_multiple_files=True,
+        key="upload_unificado"
     )
     
-    # Apenas exibe o componente correspondente se o utilizador selecionar explicitamente no menu
-    if opcao_anexo == "📁 Fotos e Vídeos (Galeria)":
-        fich_carregados = st.file_uploader("Selecione um ou mais documentos/fotos:", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
-        if fich_carregados:
-            if st.button("Adicionar à Ocorrência"):
-                for f in fich_carregados:
+    if fich_carregados:
+        # Botão para consolidar as fotos na lista acumulada da sessão
+        if st.button("Adicionar Evidências Selecionadas"):
+            for f in fich_carregados:
+                # Lê os bytes de forma segura para garantir compatibilidade com a IA e PDF
+                conteudo_bytes = f.read()
+                tipo_mime = f.type if f.type else "image/jpeg"
+                
+                # Evita duplicados exatos pelo nome e tamanho
+                ja_existe = any(item["nome"] == f.name and len(item["bytes"]) == len(conteudo_bytes) for item in st.session_state.lista_fotos)
+                if not ja_existe:
                     st.session_state.lista_fotos.append({
-                        "bytes": f.read(),
-                        "type": f.type if f.type else "image/jpeg",
+                        "bytes": conteudo_bytes,
+                        "type": tipo_mime,
                         "nome": f.name
                     })
-                st.success(f"{len(fich_carregados)} ficheiro(s) adicionado(s) com sucesso!")
-                st.rerun()
-                
-    elif opcao_anexo == "📷 Tirar Foto com a Câmara":
-        st.info("Aponte a câmara e clique no botão para capturar:")
-        foto_capturada = st.camera_input("Capturar imagem")
-        if foto_capturada is not None:
-            foto_hash = hash(foto_capturada.getvalue())
-            if "ultima_foto_hash" not in st.session_state or st.session_state.ultima_foto_hash != foto_hash:
-                st.session_state.ultima_foto_hash = foto_hash
-                st.session_state.lista_fotos.append({
-                    "bytes": foto_capturada.getvalue(),
-                    "type": "image/jpeg",
-                    "nome": f"Foto_Camera_{len(st.session_state.lista_fotos)+1}.jpg"
-                })
-                st.success("Foto capturada e adicionada com sucesso!")
-                st.rerun()
+            st.success("Evidência(s) adicionada(s) com sucesso!")
+            st.rerun()
 
-    # Exibição limpa e compacta das evidências em formato de lista expansível
+    # Exibição limpa em formato de lista expansível
     if st.session_state.lista_fotos:
-        st.markdown(f"**Evidências anexadas ({len(st.session_state.lista_fotos)}):** Clique para conferir")
+        st.markdown(f"**Evidências prontas para envio ({len(st.session_state.lista_fotos)}):**")
         
         for idx, item in enumerate(st.session_state.lista_fotos):
             with st.expander(f"📄 {item['nome']} (Ver imagem)"):
                 st.image(item["bytes"], use_container_width=True)
-                if st.button("❌ Remover esta foto", key=f"rem_{idx}"):
+                if st.button("❌ Remover", key=f"rem_{idx}"):
                     st.session_state.lista_fotos.pop(idx)
                     st.rerun()
         
         if st.button("🗑️ Limpar Todas as Evidências"):
             st.session_state.lista_fotos = []
-            if "ultima_foto_hash" in st.session_state:
-                del st.session_state.ultima_foto_hash
             st.rerun()
 
     st.markdown("---")
