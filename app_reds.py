@@ -16,7 +16,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilização CSS Moderna: Grafite Amarronzado (#231F1E) com Laranja Escurecido/Queimado (#D9531E)
+# Estilização CSS com Laranja Queimado Operacional (#C2410C)
 st.markdown("""
 <style>
     /* Fundo geral da aplicação */
@@ -27,7 +27,7 @@ st.markdown("""
     
     /* Cabeçalhos e títulos */
     h1, h2, h3 {
-        color: #F26419 !important;
+        color: #C2410C !important;
         font-family: 'Helvetica Neue', sans-serif;
     }
     
@@ -39,9 +39,9 @@ st.markdown("""
         border-radius: 8px !important;
     }
     
-    /* Botões principais de Ação */
+    /* Botões principais de Ação com Laranja Queimado */
     .stButton button[kind="primary"], div.stButton > button {
-        background-color: #D9531E !important;
+        background-color: #C2410C !important;
         color: white !important;
         border: none !important;
         border-radius: 8px !important;
@@ -50,7 +50,7 @@ st.markdown("""
     }
     
     .stButton button:hover {
-        background-color: #B54213 !important;
+        background-color: #9A3206 !important;
     }
     
     /* Expansores de documentos */
@@ -115,11 +115,11 @@ def gerar_pdf(conteudo_texto):
 col1, col2 = st.columns(2)
 
 with col1:
-    # Seletor de Natureza
+    # Seletor de Natureza atualizado conforme solicitado
     natureza_ocorrencia = st.selectbox(
-        "Selecione a Natureza:",
+        "Natureza:",
         [
-            "Acidente de Trânsito com Vítima / Capotamento / Atropelamento",
+            "Acidente de Trânsito com Vítima.",
             "Incêndio em Edificação / Vegetação / Veículo",
             "Salvamento (Altura, Aquático, Terrestre)",
             "Busca e Salvamento de Desaparecidos",
@@ -325,7 +325,7 @@ with col2:
             texto_wapp = urllib.parse.quote(f"*RELATÓRIO DE REDS - EASY REDS*\n\n{st.session_state.ultimo_resultado}")
             url_whatsapp = f"https://api.whatsapp.com/send?text={texto_wapp}"
             st.markdown(
-                f'<a href="{url_whatsapp}" target="_blank"><button style="width:100%; background-color:#D9531E; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">🟢 WhatsApp</button></a>',
+                f'<a href="{url_whatsapp}" target="_blank"><button style="width:100%; background-color:#C2410C; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">🟢 WhatsApp</button></a>',
                 unsafe_allow_html=True
             )
             
