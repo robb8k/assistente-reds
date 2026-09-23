@@ -30,6 +30,9 @@ if "lista_fotos" not in st.session_state:
 if "ultimo_resultado" not in st.session_state:
     st.session_state.ultimo_resultado = ""
 
+if "processed_audio_hash" not in st.session_state:
+    st.session_state.processed_audio_hash = None
+
 # Função para gerar PDF formatado
 def gerar_pdf(conteudo_texto):
     temp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
@@ -76,23 +79,25 @@ with col1:
     
     st.subheader("Dados (Cena / Retorno)")
     
-    # Sistema de Gravação de Áudio Refatorado do Zero
+    # Sistema de Gravação de Áudio Blindado contra Loops
     st.markdown("🎙️")
     audio_file_input = st.audio_input("Grave o relato da ocorrência falando ao microfone:")
     
     if audio_file_input is not None:
-        # Identificador único para evitar processamentos duplicados do mesmo áudio
-        current_audio_id = id(audio_file_input)
-        if st.session_state.get("processed_audio_id") != current_audio_id:
+        audio_bytes = audio_file_input.getvalue()
+        audio_hash = hash(audio_bytes)
+        
+        # Só processa se for um áudio absolutamente novo (evita o loop infinito)
+        if st.session_state.processed_audio_hash != audio_hash:
+            st.session_state.processed_audio_hash = audio_hash
+            
             with st.spinner("A transcrever áudio com o Whisper..."):
                 audio_path = None
                 try:
-                    # Grava o binário num ficheiro temporário com extensão universal suportada
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".m4a") as tmp_audio:
-                        tmp_audio.write(audio_file_input.read())
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_audio:
+                        tmp_audio.write(audio_bytes)
                         audio_path = tmp_audio.name
                     
-                    # Envia o ficheiro físico diretamente para a OpenAI
                     with open(audio_path, "rb") as f:
                         transcript = client.audio.transcriptions.create(
                             model="whisper-1",
@@ -108,11 +113,10 @@ with col1:
                         else:
                             st.session_state.relato_acumulado = texto_transcrito
                         
-                        st.session_state.processed_audio_id = current_audio_id
                         st.success("Áudio transcrito com sucesso!")
                         st.rerun()
                     else:
-                        st.warning("⚠️ O áudio gravado parece estar vazio. Tente novamente.")
+                        st.warning("⚠️ O áudio gravado parece estar vazio.")
                         
                 except Exception as e:
                     st.error(f"Erro na transcrição: {e}")
@@ -142,13 +146,12 @@ with col1:
         st.session_state.relato_acumulado = ""
         st.session_state.lista_fotos = []
         st.session_state.ultimo_resultado = ""
-        if "processed_audio_id" in st.session_state:
-            del st.session_state.processed_audio_id
+        st.session_state.processed_audio_hash = None
         st.rerun()
 
     st.markdown("---")
     
-    # Textos atualizados conforme solicitado anteriormente
+    # Documentos
     st.markdown("📎 **Documentos:**")
     fich_carregados = st.file_uploader(
         "Abrir arquivo:", 
