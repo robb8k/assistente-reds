@@ -61,7 +61,7 @@ def gerar_pdf(conteudo_texto):
 col1, col2 = st.columns(2)
 
 with col1:
-    # Seletor de Natureza atualizado
+    # Seletor de Natureza
     natureza_ocorrencia = st.selectbox(
         "Selecione a Natureza:",
         [
@@ -76,7 +76,7 @@ with col1:
     
     st.subheader("Dados (Cena / Retorno)")
     
-    # Sistema de Gravação de Áudio Original e Funcional
+    # Sistema de Gravação de Áudio com Diagnóstico de Erro Detalhado
     st.markdown("🎙️")
     audio_bytes = st.audio_input("Grave o relato da ocorrência falando ao microfone:")
     
@@ -85,6 +85,7 @@ with col1:
         if "ultimo_audio" not in st.session_state or st.session_state.ultimo_audio != audio_hash:
             st.session_state.ultimo_audio = audio_hash
             with st.spinner("A transcrever áudio do microfone..."):
+                tmp_path = None
                 try:
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
                         tmp.write(audio_bytes.read())
@@ -98,16 +99,22 @@ with col1:
                         )
                     novo_texto = transcript.text
                     
-                    if st.session_state.relato_acumulado.strip():
-                        st.session_state.relato_acumulado += f"\n{novo_texto}"
+                    if novo_texto and novo_texto.strip():
+                        if st.session_state.relato_acumulado.strip():
+                            st.session_state.relato_acumulado += f"\n{novo_texto}"
+                        else:
+                            st.session_state.relato_acumulado = novo_texto
+                            
+                        st.success("Áudio transcrito e adicionado ao relato com sucesso!")
                     else:
-                        st.session_state.relato_acumulado = novo_texto
+                        st.warning("⚠️ O áudio foi gravado, mas a transcrição veio vazia.")
                         
-                    st.success("Áudio transcrito e adicionado ao relato com sucesso!")
                     os.unlink(tmp_path)
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Erro na transcrição por microfone: {e}")
+                    st.error(f"❌ Erro detalhado na transcrição Whisper: {str(e)}")
+                    if tmp_path and os.path.exists(tmp_path):
+                        os.unlink(tmp_path)
 
     # Callback para manter o texto sincronizado no session_state em tempo real
     def atualizar_relato():
@@ -134,30 +141,33 @@ with col1:
 
     st.markdown("---")
     
-    # Textos solicitados aplicados
+    # Sistema de Documentos robusto
     st.markdown("📎 **Documentos:**")
     fich_carregados = st.file_uploader(
         "Abrir arquivo:", 
-        type=["jpg", "jpeg", "png", "webp"],
+        type=["jpg", "jpeg", "png", "webp", "pdf"],
         accept_multiple_files=True,
         key="upload_geral_completo"
     )
     
     if fich_carregados:
         if st.button("Adicionar Evidências Selecionadas"):
-            for f in fich_carregados:
-                conteudo_bytes = f.read()
-                tipo_mime = f.type if f.type else "image/jpeg"
-                
-                ja_existe = any(item["nome"] == f.name and len(item["bytes"]) == len(conteudo_bytes) for item in st.session_state.lista_fotos)
-                if not ja_existe:
-                    st.session_state.lista_fotos.append({
-                        "bytes": conteudo_bytes,
-                        "type": tipo_mime,
-                        "nome": f.name
-                    })
-            st.success("Evidência(s) adicionada(s) com sucesso!")
-            st.rerun()
+            try:
+                for f in fich_carregados:
+                    conteudo_bytes = f.read()
+                    tipo_mime = f.type if f.type else "image/jpeg"
+                    
+                    ja_existe = any(item["nome"] == f.name and len(item["bytes"]) == len(conteudo_bytes) for item in st.session_state.lista_fotos)
+                    if not ja_existe:
+                        st.session_state.lista_fotos.append({
+                            "bytes": conteudo_bytes,
+                            "type": tipo_mime,
+                            "nome": f.name
+                        })
+                st.success("Evidência(s) adicionada(s) com sucesso!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Erro ao carregar ficheiro: {str(e)}")
 
     # Exibição limpa em formato de lista expansível
     if st.session_state.lista_fotos:
@@ -165,7 +175,11 @@ with col1:
         
         for idx, item in enumerate(st.session_state.lista_fotos):
             with st.expander(f"📄 {item['nome']} (Ver imagem)"):
-                st.image(item["bytes"], use_container_width=True)
+                try:
+                    st.image(item["bytes"], use_container_width=True)
+                except:
+                    st.info("Ficheiro carregado (pré-visualização gráfica indisponível para este formato).")
+                
                 if st.button("❌ Remover", key=f"rem_{idx}"):
                     st.session_state.lista_fotos.pop(idx)
                     st.rerun()
@@ -178,7 +192,6 @@ with col1:
     processar = st.button("Gerar Relatório", type="primary", use_container_width=True)
 
 with col2:
-    # Título correto
     st.subheader("Relatório:")
     
     if processar:
@@ -200,7 +213,7 @@ with col2:
             FORMATO ESTRITO DE RESPOSTA (DIVIDIDO EM 3 BLOCOS):
             ### BLOCO A: CAMPOS ESTRUTURADOS (Extraia com precisão cirúrgica todos os dados de nomes, CPFs, RGs, idades e veículos vindos do texto e de todas as imagens enviadas)
             ### BLOCO B: HISTÓRICO NARRATIVO COMPLETO (Redigido com clareza técnica militar e impessoalidade)
-            ### BLOCO C: AUDITORIA TÉCNICA E PENDÊNCIAS (Apontando riscos de glosa, inconsistências e dados faltantes críticos)
+            ### BLOCO C: AUDITORIA TÉCNICA И PENDÊNCIAS (Apontando riscos de glosa, inconsistências e dados faltantes críticos)
             """
 
             with st.spinner(f"A ler documentos, analisar evidências e gerar relatório ({natureza_ocorrencia})..."):
@@ -230,7 +243,7 @@ with col2:
                     st.session_state.ultimo_resultado = resultado
                     
                 except Exception as e:
-                    st.error(f"Erro no processamento da IA: {e}")
+                    st.error(f"❌ Erro detalhado na API da OpenAI (GPT-4o-mini): {str(e)}")
 
     # Exibe o resultado e as opções de partilha mantendo o estado na sessão
     if st.session_state.ultimo_resultado:
