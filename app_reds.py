@@ -12,11 +12,12 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.set_page_config(
-    page_title="Easy REDS",
+    page_title="REDS",
+    page_icon="🚒",
     layout="wide"
 )
 
-# Estilização CSS com Laranja Queimado Operacional (#C2410C) e ocultação do texto de limite do uploader
+# Estilização CSS com Laranja Queimado Operacional (#C2410C) e melhorias visuais
 st.markdown("""
 <style>
     /* Fundo geral da aplicação */
@@ -85,7 +86,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("""
-# 📋 Easy REDS
+# 🚒 REDS
 """)
 
 # Inicializa os estados de sessão para garantir persistência robusta
@@ -211,7 +212,7 @@ with col1:
 
     st.markdown("---")
     
-    # Sistema de Documentos com o texto de tamanho ocultado por CSS
+    # Sistema de Documentos
     fich_carregados = st.file_uploader(
         "Ficheiros:", 
         type=["jpg", "jpeg", "png", "webp", "pdf"],
