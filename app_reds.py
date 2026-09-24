@@ -16,7 +16,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilização CSS com Laranja Queimado Operacional (#C2410C) e melhorias visuais (Microfone e botão + maiores)
+# Estilização CSS com Laranja Queimado Operacional (#C2410C) e ocultação do texto de limite do uploader
 st.markdown("""
 <style>
     /* Fundo geral da aplicação */
@@ -49,6 +49,11 @@ st.markdown("""
     [data-testid="stFileUploader"] svg, [data-testid="stFileUploaderDropzone"] svg {
         width: 24px !important;
         height: 24px !important;
+    }
+    
+    /* Ocultar a frase padrão de limite de tamanho no uploader de ficheiros */
+    [data-testid="stFileUploader"] small {
+        display: none !important;
     }
     
     /* Botões principais de Ação com Laranja Queimado */
@@ -140,7 +145,7 @@ with col1:
     
     st.subheader("Dados:")
     
-    # Sistema de Gravação de Áudio com string vazia no label para remover o texto duplicado
+    # Sistema de Gravação de Áudio
     st.markdown("🎙️ **Gravar:**")
     audio_rec = st.audio_input(label="", label_visibility="collapsed")
     
@@ -206,7 +211,7 @@ with col1:
 
     st.markdown("---")
     
-    # Sistema de Documentos
+    # Sistema de Documentos com o texto de tamanho ocultado por CSS
     fich_carregados = st.file_uploader(
         "Ficheiros:", 
         type=["jpg", "jpeg", "png", "webp", "pdf"],
@@ -334,7 +339,7 @@ with col2:
             texto_wapp = urllib.parse.quote(f"*RELATÓRIO DE REDS - EASY REDS*\n\n{st.session_state.ultimo_resultado}")
             url_whatsapp = f"https://api.whatsapp.com/send?text={texto_wapp}"
             st.markdown(
-                f'<a href="{url_whatsapp}" target="_blank"><button style="width:100%; background-color:#C2410C; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">🟢 WhatsApp</button></a>',
+                f'<a href="{url_whatsapp}" target="_blank"><button style="width:100%; background-color:#25D366; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">🟢 WhatsApp</button></a>',
                 unsafe_allow_html=True
             )
             
