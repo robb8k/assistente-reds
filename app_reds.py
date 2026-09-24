@@ -13,7 +13,7 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.set_page_config(
     page_title="REDS +",
-    page_icon="🚒",
+
     layout="wide"
 )
 
