@@ -140,9 +140,9 @@ with col1:
     
     st.subheader("Dados:")
     
-    # Sistema de Gravação de Áudio com ícone ampliado via CSS
+    # Sistema de Gravação de Áudio com string vazia no label para remover o texto duplicado
     st.markdown("🎙️ **Gravar:**")
-    audio_rec = st.audio_input("gravar")
+    audio_rec = st.audio_input(label="", label_visibility="collapsed")
     
     if audio_rec is not None:
         audio_bytes = audio_rec.getvalue()
@@ -206,7 +206,7 @@ with col1:
 
     st.markdown("---")
     
-    # Sistema de Documentos com botão atualizado para "Adicionar"
+    # Sistema de Documentos
     fich_carregados = st.file_uploader(
         "Ficheiros:", 
         type=["jpg", "jpeg", "png", "webp", "pdf"],
