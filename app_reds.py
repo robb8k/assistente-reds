@@ -254,7 +254,7 @@ with col1:
                     st.session_state.lista_fotos.pop(idx)
                     st.rerun()
         
-        if st.button("Limpar"):
+        if st.button("Remover"):
             st.session_state.lista_fotos = []
             st.rerun()
 
