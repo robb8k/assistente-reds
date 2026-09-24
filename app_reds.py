@@ -12,7 +12,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.set_page_config(
-    page_title="REDS",
+    page_title="REDS +",
     page_icon="🚒",
     layout="wide"
 )
@@ -86,7 +86,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("""
-# 🚒 REDS
+# 🚒 REDS +
 """)
 
 # Inicializa os estados de sessão para garantir persistência robusta
@@ -254,7 +254,7 @@ with col1:
                     st.session_state.lista_fotos.pop(idx)
                     st.rerun()
         
-        if st.button("🗑️ Limpar Todas as Evidências"):
+        if st.button("Limpar"):
             st.session_state.lista_fotos = []
             st.rerun()
 
@@ -282,8 +282,8 @@ with col2:
 
             FORMATO ESTRITO DE RESPOSTA (DIVIDIDO EM 3 BLOCOS):
             ### BLOCO A: CAMPOS ESTRUTURADOS
-            ### BLOCO B: HISTÓRICO NARRATIVO COMPLETO
-            ### BLOCO C: AUDITORIA TÉCNICA E PENDÊNCIAS
+            ### BLOCO B: HISTÓRICO NARRATIVO
+            ### BLOCO C: PENDÊNCIAS
             """
 
             with st.spinner(f"A gerar relatório ({natureza_ocorrencia})..."):
@@ -337,7 +337,7 @@ with col2:
             )
             
         with col_wapp:
-            texto_wapp = urllib.parse.quote(f"*RELATÓRIO DE REDS - EASY REDS*\n\n{st.session_state.ultimo_resultado}")
+            texto_wapp = urllib.parse.quote(f"*RELATÓRIO DE REDS - REDS +*\n\n{st.session_state.ultimo_resultado}")
             url_whatsapp = f"https://api.whatsapp.com/send?text={texto_wapp}"
             st.markdown(
                 f'<a href="{url_whatsapp}" target="_blank"><button style="width:100%; background-color:#25D366; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">🟢 WhatsApp</button></a>',
@@ -345,7 +345,7 @@ with col2:
             )
             
         with col_mail:
-            assunto_mail = urllib.parse.quote("Relatório de Ocorrência - Easy REDS")
+            assunto_mail = urllib.parse.quote("Relatório de Ocorrência - REDS +")
             corpo_mail = urllib.parse.quote(st.session_state.ultimo_resultado)
             url_email = f"mailto:?subject={assunto_mail}&body={corpo_mail}"
             st.markdown(
