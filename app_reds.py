@@ -16,7 +16,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilização CSS com Laranja Queimado Operacional (#C2410C)
+# Estilização CSS com Laranja Queimado Operacional (#C2410C) e melhorias visuais (Microfone e botão + maiores)
 st.markdown("""
 <style>
     /* Fundo geral da aplicação */
@@ -37,6 +37,18 @@ st.markdown("""
         color: #FFFFFF !important;
         border: 1px solid #4A4240 !important;
         border-radius: 8px !important;
+    }
+    
+    /* Aumentar o ícone do microfone dentro do st.audio_input */
+    [data-testid="stAudioInput"] svg {
+        width: 26px !important;
+        height: 26px !important;
+    }
+    
+    /* Aumentar o botão de mais (+) que aparece ao lado dos ficheiros carregados */
+    [data-testid="stFileUploader"] svg, [data-testid="stFileUploaderDropzone"] svg {
+        width: 24px !important;
+        height: 24px !important;
     }
     
     /* Botões principais de Ação com Laranja Queimado */
@@ -128,9 +140,9 @@ with col1:
     
     st.subheader("Dados:")
     
-    # Sistema de Gravação de Áudio com o título Gravar: atualizado
+    # Sistema de Gravação de Áudio com ícone ampliado via CSS
     st.markdown("🎙️ **Gravar:**")
-    audio_rec = st.audio_input("")
+    audio_rec = st.audio_input("gravar")
     
     if audio_rec is not None:
         audio_bytes = audio_rec.getvalue()
@@ -194,7 +206,7 @@ with col1:
 
     st.markdown("---")
     
-    # Sistema de Documentos
+    # Sistema de Documentos com botão atualizado para "Adicionar"
     fich_carregados = st.file_uploader(
         "Ficheiros:", 
         type=["jpg", "jpeg", "png", "webp", "pdf"],
@@ -203,7 +215,7 @@ with col1:
     )
     
     if fich_carregados:
-        if st.button("Adicionar Evidências Selecionadas"):
+        if st.button("Adicionar"):
             try:
                 for f in fich_carregados:
                     conteudo_bytes = f.read()
